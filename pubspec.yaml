@@ -1,0 +1,47 @@
+name: racepal
+description: UK Race & Parkrun social calendar
+
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Firebase
+  firebase_core: ^2.27.0
+  firebase_auth: ^4.17.0
+  cloud_firestore: ^4.15.0
+  firebase_storage: ^11.6.0
+
+  # Google Sign-In
+  google_sign_in: ^6.2.1
+
+  # State management
+  provider: ^6.1.2
+
+  # UI
+  cached_network_image: ^3.3.1
+  flutter_rating_bar: ^4.0.1
+  intl: ^0.19.0
+  image_picker: ^1.0.7
+  timeago: ^3.6.1
+  url_launcher: ^6.2.5
+  shimmer: ^3.0.0
+
+  # Utils
+  uuid: ^4.3.3
+  shared_preferences: ^2.2.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/parkruns_uk.json
