@@ -35,6 +35,7 @@ class AppProvider extends ChangeNotifier {
       if (firebaseUser != null) {
         _listenToUser(firebaseUser.uid);
         _listenToFollowing(firebaseUser.uid);
+        _autoCompletePastRaces(firebaseUser.uid);
       } else {
         _currentUser = null;
         _followingUids = [];
@@ -43,6 +44,25 @@ class AppProvider extends ChangeNotifier {
         notifyListeners();
       }
     });
+  }
+
+  /// Flips 'going' to 'attended' for races whose date has passed.
+  Future<void> _autoCompletePastRaces(String uid) async {
+    try {
+      final atts = await _raceService.userAttendances(uid).first;
+      for (final a in atts.where((a) => a.status == AttendanceStatus.going)) {
+        final race = await _raceService.getRace(a.raceId);
+        if (race != null && race.isPast) {
+          await _raceService.setAttendance(
+            raceId: a.raceId,
+            userId: uid,
+            status: AttendanceStatus.attended,
+          );
+        }
+      }
+    } catch (_) {
+      // Non-critical; retried on next sign-in
+    }
   }
 
   void _listenToUser(String uid) {
