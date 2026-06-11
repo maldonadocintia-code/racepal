@@ -34,8 +34,7 @@ dependencies:
   table_calendar: ^3.1.2
   googleapis: ^13.2.0
   http: ^1.2.1
-  flutter_map: ^7.0.2
-  latlong2: ^0.9.1
+  google_maps_flutter: ^2.9.0
 
   # Utils
   uuid: ^4.3.3

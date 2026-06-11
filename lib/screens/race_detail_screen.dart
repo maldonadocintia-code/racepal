@@ -491,6 +491,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
   late final TextEditingController _bodyCtrl;
   late final TextEditingController _timeCtrl;
   late bool _isPublic;
+  late bool _recommend;
   bool _saving = false;
 
   bool get _isEditing => widget.existingReview != null;
@@ -503,6 +504,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
     _bodyCtrl = TextEditingController(text: e?.body ?? '');
     _timeCtrl = TextEditingController(text: e?.finishTime ?? '');
     _isPublic = e?.isPublic ?? true;
+    _recommend = e?.recommend ?? true;
   }
 
   @override
@@ -568,6 +570,17 @@ class _ReviewSheetState extends State<ReviewSheet> {
               alignLabelWithHint: true,
             ),
           ),
+          const SizedBox(height: 16),
+          const Text('Would you recommend this event?',
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _recommendBtn(true, '⚡ Yes'),
+              const SizedBox(width: 10),
+              _recommendBtn(false, 'No'),
+            ],
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -609,6 +622,40 @@ class _ReviewSheetState extends State<ReviewSheet> {
     );
   }
 
+  Widget _recommendBtn(bool value, String label) {
+    final selected = _recommend == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _recommend = value),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: selected
+                ? (value ? AppTheme.primary : AppTheme.surfaceLight)
+                : AppTheme.surfaceLight,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: selected
+                  ? (value ? AppTheme.primary : AppTheme.textSecondary)
+                  : AppTheme.divider,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: selected ? Colors.white : AppTheme.textSecondary,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _submit() async {
     setState(() => _saving = true);
     final provider = context.read<AppProvider>();
@@ -624,6 +671,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
         body: _bodyCtrl.text.trim().isNotEmpty ? _bodyCtrl.text.trim() : null,
         finishTime: _timeCtrl.text.trim().isNotEmpty ? _timeCtrl.text.trim() : null,
         isPublic: _isPublic,
+        recommend: _recommend,
         createdAt: e.createdAt,
       ));
     } else {
@@ -634,6 +682,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
         body: _bodyCtrl.text.trim().isNotEmpty ? _bodyCtrl.text.trim() : null,
         finishTime: _timeCtrl.text.trim().isNotEmpty ? _timeCtrl.text.trim() : null,
         isPublic: _isPublic,
+        recommend: _recommend,
       );
     }
     if (mounted) Navigator.pop(context);

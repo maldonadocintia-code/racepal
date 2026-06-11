@@ -181,6 +181,33 @@ class FollowService {
       .snapshots()
       .map((s) => s.docs.map((d) => d.data()).toList());
 
+  Stream<List<AppUser>> followingUsers(String uid) =>
+      followingUids(uid).asyncMap((uids) => _fetchUsers(uids));
+
+  Stream<List<AppUser>> followerUsers(String uid) =>
+      followerUids(uid).asyncMap((uids) => _fetchUsers(uids));
+
+  Future<List<AppUser>> getPals(String uid) async {
+    final following = await followingUids(uid).first;
+    final followers = await followerUids(uid).first;
+    final palUids = following.toSet().intersection(followers.toSet()).toList();
+    return _fetchUsers(palUids);
+  }
+
+  Future<List<AppUser>> _fetchUsers(List<String> uids) async {
+    if (uids.isEmpty) return [];
+    final results = <AppUser>[];
+    for (var i = 0; i < uids.length; i += 30) {
+      final chunk = uids.sublist(i, (i + 30).clamp(0, uids.length));
+      final snap = await _db
+          .collection(AppConstants.usersCol)
+          .where(FieldPath.documentId, whereIn: chunk)
+          .get();
+      results.addAll(snap.docs.map((d) => AppUser.fromDoc(d)));
+    }
+    return results;
+  }
+
   Future<List<AppUser>> searchUsers(String query) async {
     if (query.isEmpty) return [];
     final snap = await _db

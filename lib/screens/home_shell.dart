@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/app_provider.dart';
 import '../theme.dart';
+import 'map_screen.dart';
 import 'feed_screen.dart';
-import 'discover_screen.dart';
 import 'calendar_screen.dart';
 import 'profile_screen.dart';
 
@@ -16,7 +16,6 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _currentIndex = 0;
-
   late final List<Widget> _screens;
 
   @override
@@ -24,8 +23,8 @@ class _HomeShellState extends State<HomeShell> {
     super.initState();
     final uid = context.read<AppProvider>().currentUser!.uid;
     _screens = [
+      const MapScreen(),
       const FeedScreen(),
-      const DiscoverScreen(),
       const CalendarScreen(),
       ProfileScreen(uid: uid),
     ];
@@ -48,14 +47,14 @@ class _HomeShellState extends State<HomeShell> {
           type: BottomNavigationBarType.fixed,
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home),
-              label: 'Feed',
+              icon: Icon(Icons.map_outlined),
+              activeIcon: Icon(Icons.map),
+              label: 'Map',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.search_outlined),
-              activeIcon: Icon(Icons.search),
-              label: 'Discover',
+              icon: Icon(Icons.people_outline),
+              activeIcon: Icon(Icons.people),
+              label: 'Feed',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.calendar_month_outlined),
@@ -63,9 +62,9 @@ class _HomeShellState extends State<HomeShell> {
               label: 'Calendar',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.person_outlined),
+              icon: Icon(Icons.person_outline),
               activeIcon: Icon(Icons.person),
-              label: 'Profile',
+              label: 'Me',
             ),
           ],
         ),

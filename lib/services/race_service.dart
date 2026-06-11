@@ -45,6 +45,17 @@ class RaceService {
     return ref.id;
   }
 
+  /// Creates the race doc with a deterministic id if it doesn't exist yet.
+  /// Used when attending a parkrun or findarace event that lives in assets.
+  Future<String> ensureRace(Race race) async {
+    final ref = _db.collection(AppConstants.racesCol).doc(race.id);
+    final doc = await ref.get();
+    if (!doc.exists) {
+      await ref.set(race.toMap());
+    }
+    return race.id;
+  }
+
   Future<void> deleteRace(String raceId) async {
     await _db.collection(AppConstants.racesCol).doc(raceId).delete();
   }
@@ -107,6 +118,18 @@ class RaceService {
       .snapshots()
       .map((s) => s.docs.map((d) => Attendance.fromDoc(d)).toList());
 
+  Stream<List<Attendance>> attendancesForUsers(List<String> userIds) {
+    if (userIds.isEmpty) return Stream.value([]);
+    // Firestore whereIn limit is 30
+    final ids = userIds.take(30).toList();
+    return _db
+        .collection(AppConstants.attendancesCol)
+        .where('userId', whereIn: ids)
+        .where('status', isEqualTo: 'going')
+        .snapshots()
+        .map((s) => s.docs.map((d) => Attendance.fromDoc(d)).toList());
+  }
+
   Stream<List<Attendance>> raceAttendees(String raceId) => _db
       .collection(AppConstants.attendancesCol)
       .where('raceId', isEqualTo: raceId)
@@ -119,16 +142,28 @@ class RaceService {
     final batch = _db.batch();
     final reviewRef = _db.collection(AppConstants.reviewsCol).doc();
     batch.set(reviewRef, review.toMap());
-
-    // Update race aggregate
-    final raceRef = _db.collection(AppConstants.racesCol).doc(review.raceId);
-    batch.update(raceRef, {
-      'reviewCount': FieldValue.increment(1),
-      // Note: averageRating should be recalculated via Cloud Function
-      // For now we do a simple update
-    });
-
     await batch.commit();
+    await _recalcRaceStats(review.raceId);
+  }
+
+  Future<void> _recalcRaceStats(String raceId) async {
+    final snap = await _db
+        .collection(AppConstants.reviewsCol)
+        .where('raceId', isEqualTo: raceId)
+        .get();
+    if (snap.docs.isEmpty) return;
+    final reviews = snap.docs.map((d) => Review.fromDoc(d)).toList();
+    final count = reviews.length;
+    final avg = reviews.map((r) => r.rating).reduce((a, b) => a + b) / count;
+    final recommended = reviews.where((r) => r.recommend).length;
+    final recommendPercent = recommended / count;
+    final bolt = count >= 10 && recommendPercent >= 0.8;
+    await _db.collection(AppConstants.racesCol).doc(raceId).update({
+      'reviewCount': count,
+      'averageRating': avg,
+      'recommendPercent': recommendPercent,
+      'lightningBolt': bolt,
+    });
   }
 
   Stream<List<Review>> raceReviews(String raceId, {bool publicOnly = false}) {

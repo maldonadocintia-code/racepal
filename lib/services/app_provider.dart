@@ -166,6 +166,7 @@ class AppProvider extends ChangeNotifier {
     String? body,
     String? finishTime,
     bool isPublic = true,
+    bool recommend = true,
   }) async {
     if (_currentUser == null) return;
     final review = Review(
@@ -178,6 +179,7 @@ class AppProvider extends ChangeNotifier {
       body: body,
       finishTime: finishTime,
       isPublic: isPublic,
+      recommend: recommend,
       createdAt: DateTime.now(),
     );
     await _raceService.addReview(review);

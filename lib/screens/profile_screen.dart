@@ -5,6 +5,7 @@ import '../models/user_model.dart';
 import '../models/review_model.dart';
 import '../widgets/shared_widgets.dart';
 import '../theme.dart';
+import 'pals_screen.dart';
 import 'edit_profile_screen.dart';
 import 'race_detail_screen.dart';
 
@@ -111,9 +112,37 @@ class _ProfileBody extends StatelessWidget {
                     children: [
                       _stat('Races', user.racesCount.toString()),
                       _statDivider(),
-                      _stat('Followers', user.followersCount.toString()),
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PalsScreen(uid: user.uid),
+                          ),
+                        ),
+                        child: FutureBuilder<List<AppUser>>(
+                          future: context
+                              .read<AppProvider>()
+                              .followService
+                              .getPals(user.uid),
+                          builder: (ctx, snap) => _stat(
+                            'Pals',
+                            snap.hasData ? snap.data!.length.toString() : '—',
+                          ),
+                        ),
+                      ),
                       _statDivider(),
-                      _stat('Following', user.followingCount.toString()),
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PalsScreen(
+                              uid: user.uid,
+                              initialTab: 2,
+                            ),
+                          ),
+                        ),
+                        child: _stat('Followers', user.followersCount.toString()),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),

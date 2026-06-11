@@ -11,6 +11,7 @@ class Review {
   final bool isPublic; // true = public, false = followers only
   final DateTime createdAt;
   final String? finishTime; // e.g. "24:32"
+  final bool recommend;
 
   Review({
     required this.id,
@@ -23,6 +24,7 @@ class Review {
     this.isPublic = true,
     required this.createdAt,
     this.finishTime,
+    this.recommend = true,
   });
 
   factory Review.fromDoc(DocumentSnapshot doc) {
@@ -38,6 +40,7 @@ class Review {
       isPublic: d['isPublic'] ?? true,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       finishTime: d['finishTime'],
+      recommend: d['recommend'] ?? true,
     );
   }
 
@@ -51,6 +54,7 @@ class Review {
     'isPublic': isPublic,
     'createdAt': Timestamp.fromDate(createdAt),
     'finishTime': finishTime,
+    'recommend': recommend,
   };
 }
 

@@ -35,8 +35,13 @@ service cloud.firestore {
     match /races/{raceId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn();
-      allow update: if isSignedIn() &&
-        (resource.data.createdBy == request.auth.uid || resource.data.createdBy == 'system');
+      // Creator can edit; anyone signed-in may update aggregate stats only
+      allow update: if isSignedIn() && (
+        resource.data.createdBy == request.auth.uid ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+          ['reviewCount', 'averageRating', 'recommendPercent', 'lightningBolt', 'attendeeCount']
+        )
+      );
       allow delete: if isSignedIn() && resource.data.createdBy == request.auth.uid;
     }
 

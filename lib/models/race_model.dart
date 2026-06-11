@@ -17,6 +17,8 @@ class Race {
   final int attendeeCount;
   final double averageRating;
   final int reviewCount;
+  final double recommendPercent; // 0.0–1.0
+  final bool lightningBolt;     // true when recommendPercent >= 0.8 && reviewCount >= 10
 
   Race({
     required this.id,
@@ -33,6 +35,8 @@ class Race {
     this.attendeeCount = 0,
     this.averageRating = 0.0,
     this.reviewCount = 0,
+    this.recommendPercent = 0.0,
+    this.lightningBolt = false,
   });
 
   factory Race.fromDoc(DocumentSnapshot doc) {
@@ -54,6 +58,8 @@ class Race {
       attendeeCount: d['attendeeCount'] ?? 0,
       averageRating: (d['averageRating'] as num?)?.toDouble() ?? 0.0,
       reviewCount: d['reviewCount'] ?? 0,
+      recommendPercent: (d['recommendPercent'] as num?)?.toDouble() ?? 0.0,
+      lightningBolt: d['lightningBolt'] ?? false,
     );
   }
 
@@ -83,6 +89,8 @@ class Race {
     'attendeeCount': attendeeCount,
     'averageRating': averageRating,
     'reviewCount': reviewCount,
+    'recommendPercent': recommendPercent,
+    'lightningBolt': lightningBolt,
   };
 
   bool get isParkrun => category == RaceCategory.parkrun;
