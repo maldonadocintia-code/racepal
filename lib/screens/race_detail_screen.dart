@@ -442,7 +442,33 @@ class _ReviewSection extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: reviews.length,
-          itemBuilder: (_, i) => ReviewTile(review: reviews[i]),
+          itemBuilder: (_, i) => ReviewTile(
+            review: reviews[i],
+            currentUserId: uid,
+            onEdit: () => showModalBottomSheet(
+              context: ctx,
+              isScrollControlled: true,
+              backgroundColor: AppTheme.surface,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              builder: (_) => ReviewSheet(
+                race: race,
+                existingReview: reviews[i],
+              ),
+            ),
+            onDelete: () async {
+              await provider.raceService.deleteReview(reviews[i]);
+              if (ctx.mounted) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(
+                    content: Text('Review deleted'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+          ),
         );
       },
     );
@@ -453,18 +479,31 @@ class _ReviewSection extends StatelessWidget {
 
 class ReviewSheet extends StatefulWidget {
   final Race race;
-  const ReviewSheet({super.key, required this.race});
+  final Review? existingReview;
+  const ReviewSheet({super.key, required this.race, this.existingReview});
 
   @override
   State<ReviewSheet> createState() => _ReviewSheetState();
 }
 
 class _ReviewSheetState extends State<ReviewSheet> {
-  double _rating = 3;
-  final _bodyCtrl = TextEditingController();
-  final _timeCtrl = TextEditingController();
-  bool _isPublic = true;
+  late double _rating;
+  late final TextEditingController _bodyCtrl;
+  late final TextEditingController _timeCtrl;
+  late bool _isPublic;
   bool _saving = false;
+
+  bool get _isEditing => widget.existingReview != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.existingReview;
+    _rating = e?.rating ?? 3;
+    _bodyCtrl = TextEditingController(text: e?.body ?? '');
+    _timeCtrl = TextEditingController(text: e?.finishTime ?? '');
+    _isPublic = e?.isPublic ?? true;
+  }
 
   @override
   void dispose() {
@@ -498,7 +537,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Review: ${widget.race.name}',
+            _isEditing ? 'Edit review' : 'Review: ${widget.race.name}',
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
           ),
           const SizedBox(height: 16),
@@ -561,7 +600,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
               onPressed: _saving ? null : _submit,
               child: _saving
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Post review'),
+                  : Text(_isEditing ? 'Update review' : 'Post review'),
             ),
           ),
           const SizedBox(height: 20),
@@ -573,14 +612,30 @@ class _ReviewSheetState extends State<ReviewSheet> {
   Future<void> _submit() async {
     setState(() => _saving = true);
     final provider = context.read<AppProvider>();
-    await provider.submitReview(
-      raceId: widget.race.id,
-      raceName: widget.race.name,
-      rating: _rating,
-      body: _bodyCtrl.text.trim().isNotEmpty ? _bodyCtrl.text.trim() : null,
-      finishTime: _timeCtrl.text.trim().isNotEmpty ? _timeCtrl.text.trim() : null,
-      isPublic: _isPublic,
-    );
+    if (_isEditing) {
+      final e = widget.existingReview!;
+      await provider.raceService.updateReview(Review(
+        id: e.id,
+        raceId: e.raceId,
+        userId: e.userId,
+        userName: e.userName,
+        userPhotoUrl: e.userPhotoUrl,
+        rating: _rating,
+        body: _bodyCtrl.text.trim().isNotEmpty ? _bodyCtrl.text.trim() : null,
+        finishTime: _timeCtrl.text.trim().isNotEmpty ? _timeCtrl.text.trim() : null,
+        isPublic: _isPublic,
+        createdAt: e.createdAt,
+      ));
+    } else {
+      await provider.submitReview(
+        raceId: widget.race.id,
+        raceName: widget.race.name,
+        rating: _rating,
+        body: _bodyCtrl.text.trim().isNotEmpty ? _bodyCtrl.text.trim() : null,
+        finishTime: _timeCtrl.text.trim().isNotEmpty ? _timeCtrl.text.trim() : null,
+        isPublic: _isPublic,
+      );
+    }
     if (mounted) Navigator.pop(context);
   }
 }

@@ -28,11 +28,12 @@ class DefaultFirebaseOptions {
   }
 
   // 🚨 Replace ALL values below with your real Firebase project config.
+
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'YOUR_API_KEY',
-    appId: '1:YOUR_APP_ID:android:YOUR_APP_HASH',
-    messagingSenderId: 'YOUR_SENDER_ID',
-    projectId: 'YOUR_PROJECT_ID',
-    storageBucket: 'YOUR_PROJECT_ID.appspot.com',
+    apiKey: 'AIzaSyC5nRfTlMTTjQMN7ipduJZrKXSS0SMrf_s',
+    appId: '1:735418458967:android:29ce874c9b298cec91d412',
+    messagingSenderId: '735418458967',
+    projectId: 'racepal-ae334',
+    storageBucket: 'racepal-ae334.firebasestorage.app',
   );
 }

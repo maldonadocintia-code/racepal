@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "735418458967",
+    "project_id": "racepal-ae334",
+    "storage_bucket": "racepal-ae334.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:735418458967:android:29ce874c9b298cec91d412",
+        "android_client_info": {
+          "package_name": "com.racepal.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "735418458967-ms10nd9fhs9dbff8l90gie0gp057e47j.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC5nRfTlMTTjQMN7ipduJZrKXSS0SMrf_s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "735418458967-ms10nd9fhs9dbff8l90gie0gp057e47j.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

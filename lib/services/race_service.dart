@@ -167,6 +167,25 @@ class RaceService {
     return Review.fromDoc(snap.docs.first);
   }
 
+  Future<void> updateReview(Review review) async {
+    await _db.collection(AppConstants.reviewsCol).doc(review.id).update({
+      'rating': review.rating,
+      'body': review.body,
+      'finishTime': review.finishTime,
+      'isPublic': review.isPublic,
+    });
+  }
+
+  Future<void> deleteReview(Review review) async {
+    final batch = _db.batch();
+    batch.delete(_db.collection(AppConstants.reviewsCol).doc(review.id));
+    batch.update(
+      _db.collection(AppConstants.racesCol).doc(review.raceId),
+      {'reviewCount': FieldValue.increment(-1)},
+    );
+    await batch.commit();
+  }
+
   // ── Activity feed ──────────────────────────────────────────────────────────
 
   Future<void> postActivity(ActivityItem item) async {

@@ -243,8 +243,19 @@ class RaceCard extends StatelessWidget {
 
 class ReviewTile extends StatelessWidget {
   final Review review;
+  final String? currentUserId;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
-  const ReviewTile({super.key, required this.review});
+  const ReviewTile({
+    super.key,
+    required this.review,
+    this.currentUserId,
+    this.onEdit,
+    this.onDelete,
+  });
+
+  bool get _isOwner => currentUserId != null && currentUserId == review.userId;
 
   @override
   Widget build(BuildContext context) {
@@ -294,6 +305,39 @@ class ReviewTile extends StatelessWidget {
                   padding: EdgeInsets.only(left: 6),
                   child: Icon(Icons.lock, size: 14, color: AppTheme.textSecondary),
                 ),
+              if (_isOwner)
+                PopupMenuButton<_ReviewAction>(
+                  icon: const Icon(Icons.more_vert,
+                      size: 18, color: AppTheme.textSecondary),
+                  color: AppTheme.surface,
+                  onSelected: (action) {
+                    if (action == _ReviewAction.edit) onEdit?.call();
+                    if (action == _ReviewAction.delete) _confirmDelete(context);
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(
+                      value: _ReviewAction.edit,
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit_outlined, size: 16, color: AppTheme.textPrimary),
+                          SizedBox(width: 10),
+                          Text('Edit review'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: _ReviewAction.delete,
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                          SizedBox(width: 10),
+                          Text('Delete review',
+                              style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
             ],
           ),
           if (review.body != null && review.body!.isNotEmpty) ...[
@@ -307,7 +351,34 @@ class ReviewTile extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: const Text('Delete review?'),
+        content: const Text(
+          'This will permanently remove your review.',
+          style: TextStyle(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) onDelete?.call();
+  }
 }
+
+enum _ReviewAction { edit, delete }
 
 // ── Activity Feed Item ────────────────────────────────────────────────────
 

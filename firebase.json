@@ -1,0 +1,25 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "racepal-ae334",
+          "appId": "1:735418458967:android:29ce874c9b298cec91d412",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "racepal-ae334",
+          "configurations": {
+            "android": "1:735418458967:android:29ce874c9b298cec91d412"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}

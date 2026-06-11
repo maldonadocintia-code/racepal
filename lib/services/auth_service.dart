@@ -9,6 +9,8 @@ class AuthService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final GoogleSignIn _google = GoogleSignIn();
 
+  GoogleSignIn get googleSignIn => _google;
+
   Stream<User?> get authStateChanges => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;
 
