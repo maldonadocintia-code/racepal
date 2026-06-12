@@ -52,6 +52,7 @@ class _RaceDetailBody extends StatelessWidget {
         actions: [
           if (provider.currentUser?.uid == race.createdBy)
             IconButton(
+              tooltip: 'Delete race',
               icon: const Icon(Icons.delete_outline),
               onPressed: () => _confirmDelete(context, provider),
             ),

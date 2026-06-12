@@ -29,14 +29,18 @@ class LightningRating extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: List.generate(5, (i) {
           final filled = i < rating;
-          return GestureDetector(
-            onTap: () => onRatingChanged?.call(i + 1.0),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: Icon(
-                Icons.bolt,
-                size: size,
-                color: filled ? AppTheme.accent : AppTheme.surfaceLight,
+          return Semantics(
+            label: '${i + 1} bolt${i == 0 ? '' : 's'}',
+            button: true,
+            child: GestureDetector(
+              onTap: () => onRatingChanged?.call(i + 1.0),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                child: Icon(
+                  Icons.bolt,
+                  size: size,
+                  color: filled ? AppTheme.accent : AppTheme.surfaceLight,
+                ),
               ),
             ),
           );
@@ -229,7 +233,7 @@ class RaceCard extends StatelessWidget {
             race.type,
             style: TextStyle(
               color: isParkrun ? AppTheme.primary : AppTheme.accent,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -307,8 +311,9 @@ class ReviewTile extends StatelessWidget {
                 ),
               if (_isOwner)
                 PopupMenuButton<_ReviewAction>(
+                  tooltip: 'Review options',
                   icon: const Icon(Icons.more_vert,
-                      size: 18, color: AppTheme.textSecondary),
+                      size: 20, color: AppTheme.textSecondary),
                   color: AppTheme.surface,
                   onSelected: (action) {
                     if (action == _ReviewAction.edit) onEdit?.call();

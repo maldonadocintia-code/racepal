@@ -68,12 +68,17 @@ class _MapScreenState extends State<MapScreen> {
 
   Future<void> _loadEvents() async {
     if (_eventsLoaded) return;
-    final raw = await rootBundle.loadString('assets/findarace_uk.json');
-    // Keep all events with a valid date — filtering is done in _rebuildMarkers
-    _eventData = (jsonDecode(raw) as List)
-        .cast<Map<String, dynamic>>()
-        .where((e) => DateTime.tryParse(e['startDate'] ?? '') != null)
-        .toList();
+    final rawFindarace = await rootBundle.loadString('assets/findarace_uk.json');
+    final rawMajor = await rootBundle.loadString('assets/major_races_uk.json');
+    final findaraceList = (jsonDecode(rawFindarace) as List).cast<Map<String, dynamic>>();
+    final majorList = (jsonDecode(rawMajor) as List).cast<Map<String, dynamic>>();
+    // Deduplicate by (name, startDate) then filter to valid dates
+    final seen = <String>{};
+    _eventData = [...findaraceList, ...majorList].where((e) {
+      final key = '${e['name']}_${e['startDate']}';
+      if (!seen.add(key)) return false;
+      return DateTime.tryParse(e['startDate'] ?? '') != null;
+    }).toList();
     _eventsLoaded = true;
     _rebuildMarkers();
   }
@@ -636,8 +641,11 @@ class _MapScreenState extends State<MapScreen> {
                   setState(() { _filterStart = null; _filterEnd = null; });
                   _rebuildMarkers();
                 },
-                child: const Icon(Icons.close,
-                    size: 13, color: AppTheme.textSecondary),
+                child: const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Icon(Icons.close,
+                      size: 14, color: AppTheme.textSecondary),
+                ),
               ),
             ],
           ],
@@ -699,7 +707,7 @@ class _MapScreenState extends State<MapScreen> {
             const SizedBox(width: 6),
             Text(label,
                 style: const TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 11)),
+                    color: AppTheme.textSecondary, fontSize: 12)),
           ],
         ),
       );
@@ -749,6 +757,7 @@ class _ParkrunPanel extends StatelessWidget {
               ),
               const Spacer(),
               IconButton(
+                  tooltip: 'Close',
                   icon: const Icon(Icons.close,
                       color: AppTheme.textSecondary, size: 20),
                   onPressed: onClose),
@@ -853,6 +862,7 @@ class _EventPanel extends StatelessWidget {
               ],
               const Spacer(),
               IconButton(
+                  tooltip: 'Close',
                   icon: const Icon(Icons.close,
                       color: AppTheme.textSecondary, size: 20),
                   onPressed: onClose),
@@ -985,6 +995,7 @@ class _RacePanel extends StatelessWidget {
                       style: TextStyle(fontSize: 16)),
                 const Spacer(),
                 IconButton(
+                    tooltip: 'Close',
                     icon: const Icon(Icons.close,
                         color: AppTheme.textSecondary, size: 20),
                     onPressed: onClose),

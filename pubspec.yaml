@@ -50,3 +50,4 @@ flutter:
   assets:
     - assets/parkruns_uk.json
     - assets/findarace_uk.json
+    - assets/major_races_uk.json
