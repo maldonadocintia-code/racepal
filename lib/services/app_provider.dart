@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../models/user_model.dart';
 import '../models/race_model.dart';
 import '../models/review_model.dart';
@@ -113,6 +115,17 @@ class AppProvider extends ChangeNotifier {
       isPublic: isPublic,
       photoUrl: photoUrl,
     );
+  }
+
+  Future<String> uploadProfilePhoto(File file) async {
+    if (_currentUser == null) throw Exception('Not signed in');
+    final ref = FirebaseStorage.instance
+        .ref()
+        .child('profile_photos/${_currentUser!.uid}.jpg');
+    await ref.putFile(file, SettableMetadata(contentType: 'image/jpeg'));
+    final url = await ref.getDownloadURL();
+    await _authService.updateProfile(uid: _currentUser!.uid, photoUrl: url);
+    return url;
   }
 
   Future<FollowStatus> getFollowStatus(String targetUid) async {

@@ -276,26 +276,48 @@ class _AttendanceRowState extends State<_AttendanceRow> {
     }
   }
 
+  Future<void> _remove() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    await context
+        .read<AppProvider>()
+        .raceService
+        .removeAttendance(raceId: widget.race.id, userId: widget.uid);
+    setState(() { _attendance = null; _loading = false; });
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = _attendance?.status;
 
+    // Row adapts to current status:
+    // - Not attending  → [Going] [Attended] [Review]
+    // - Going          → [Not going] [Attended] [Review]
+    // - Attended       → [Going] [✓ Attended] [Review]
     return Row(
       children: [
-        _btn(
-          label: 'Going',
-          icon: Icons.check_circle_outline,
-          active: status == AttendanceStatus.going,
-          onTap: () => _set(AttendanceStatus.going),
-        ),
-        const SizedBox(width: 10),
-        if (widget.race.isPast)
+        if (status == AttendanceStatus.going)
           _btn(
-            label: 'Attended',
-            icon: Icons.emoji_events_outlined,
-            active: status == AttendanceStatus.attended,
-            onTap: () => _set(AttendanceStatus.attended),
+            label: 'Not going',
+            icon: Icons.cancel_outlined,
+            active: false,
+            onTap: _remove,
+            danger: true,
+          )
+        else
+          _btn(
+            label: 'Going',
+            icon: Icons.check_circle_outline,
+            active: status == AttendanceStatus.going,
+            onTap: () => _set(AttendanceStatus.going),
           ),
+        const SizedBox(width: 10),
+        _btn(
+          label: 'Attended',
+          icon: Icons.emoji_events_outlined,
+          active: status == AttendanceStatus.attended,
+          onTap: () => _set(AttendanceStatus.attended),
+        ),
         const SizedBox(width: 10),
         _btn(
           label: 'Review',
@@ -314,6 +336,7 @@ class _AttendanceRowState extends State<_AttendanceRow> {
     required bool active,
     required VoidCallback onTap,
     bool accent = false,
+    bool danger = false,
   }) {
     return Expanded(
       child: GestureDetector(
@@ -325,11 +348,15 @@ class _AttendanceRowState extends State<_AttendanceRow> {
                 ? AppTheme.primary
                 : accent
                     ? AppTheme.accent.withOpacity(0.15)
-                    : AppTheme.surfaceLight,
+                    : danger
+                        ? Colors.red.withValues(alpha: 0.1)
+                        : AppTheme.surfaceLight,
             borderRadius: BorderRadius.circular(12),
             border: accent && !active
                 ? Border.all(color: AppTheme.accent.withOpacity(0.5))
-                : null,
+                : danger
+                    ? Border.all(color: Colors.red.withValues(alpha: 0.4))
+                    : null,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -340,7 +367,9 @@ class _AttendanceRowState extends State<_AttendanceRow> {
                       ? Colors.white
                       : accent
                           ? AppTheme.accent
-                          : AppTheme.textSecondary),
+                          : danger
+                              ? Colors.red
+                              : AppTheme.textSecondary),
               const SizedBox(width: 6),
               Text(
                 label,
@@ -349,7 +378,9 @@ class _AttendanceRowState extends State<_AttendanceRow> {
                       ? Colors.white
                       : accent
                           ? AppTheme.accent
-                          : AppTheme.textSecondary,
+                          : danger
+                              ? Colors.red
+                              : AppTheme.textSecondary,
                   fontWeight: FontWeight.w600,
                   fontSize: 13,
                 ),
