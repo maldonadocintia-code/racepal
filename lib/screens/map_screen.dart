@@ -33,6 +33,9 @@ class _MapScreenState extends State<MapScreen> {
   String _searchQuery = '';
   final TextEditingController _searchCtrl = TextEditingController();
 
+  // Date range filter — null means "upcoming / all"
+  DateTime? _filterMonth; // first day of selected month
+
   // Selected item for bottom sheet
   Map<String, dynamic>? _selectedParkrun;
   Map<String, dynamic>? _selectedEvent;
@@ -65,16 +68,43 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> _loadEvents() async {
     if (_eventsLoaded) return;
     final raw = await rootBundle.loadString('assets/findarace_uk.json');
-    final now = DateTime.now();
+    // Keep all events with a valid date — filtering is done in _rebuildMarkers
     _eventData = (jsonDecode(raw) as List)
         .cast<Map<String, dynamic>>()
-        .where((e) {
-          final d = DateTime.tryParse(e['startDate'] ?? '');
-          return d != null && d.isAfter(now);
-        })
+        .where((e) => DateTime.tryParse(e['startDate'] ?? '') != null)
         .toList();
     _eventsLoaded = true;
     _rebuildMarkers();
+  }
+
+  Future<void> _pickMonth() async {
+    final now = DateTime.now();
+    final initial = _filterMonth ?? DateTime(now.year, now.month);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(now.year, now.month),
+      lastDate: DateTime(now.year + 3, 12),
+      helpText: 'Select month',
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: ColorScheme.dark(
+            primary: AppTheme.primary,
+            surface: AppTheme.surface,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked == null) return;
+    setState(() => _filterMonth = DateTime(picked.year, picked.month));
+    _rebuildMarkers();
+  }
+
+  bool _inFilterMonth(DateTime date) {
+    if (_filterMonth == null) return date.isAfter(DateTime.now());
+    return date.year == _filterMonth!.year &&
+        date.month == _filterMonth!.month;
   }
 
   void _rebuildMarkers() {
@@ -115,17 +145,14 @@ class _MapScreenState extends State<MapScreen> {
 
     // Findarace event markers
     if (_filter != _MapFilter.parkruns) {
-      final filtered = _searchQuery.isEmpty
-          ? _eventData
-          : _eventData
-              .where((e) =>
-                  (e['name'] as String)
-                      .toLowerCase()
-                      .contains(_searchQuery.toLowerCase()) ||
-                  ((e['city'] ?? '') as String)
-                      .toLowerCase()
-                      .contains(_searchQuery.toLowerCase()))
-              .toList();
+      final filtered = _eventData.where((e) {
+        final d = DateTime.tryParse(e['startDate'] ?? '');
+        if (d == null || !_inFilterMonth(d)) return false;
+        if (_searchQuery.isEmpty) return true;
+        final q = _searchQuery.toLowerCase();
+        return (e['name'] as String).toLowerCase().contains(q) ||
+            ((e['city'] ?? '') as String).toLowerCase().contains(q);
+      }).toList();
 
       for (var i = 0; i < filtered.length; i++) {
         final e = filtered[i];
@@ -147,22 +174,22 @@ class _MapScreenState extends State<MapScreen> {
       }
     }
 
-    // Race markers
+    // Race markers (Firestore)
     if (_filter != _MapFilter.parkruns) {
-      final filtered = _searchQuery.isEmpty
-          ? _races
-          : _races
-              .where((r) =>
-                  r.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                  r.location.toLowerCase().contains(_searchQuery.toLowerCase()))
-              .toList();
+      final filtered = _races.where((r) {
+        if (!_inFilterMonth(r.date)) return false;
+        if (_searchQuery.isEmpty) return true;
+        final q = _searchQuery.toLowerCase();
+        return r.name.toLowerCase().contains(q) ||
+            r.location.toLowerCase().contains(q);
+      }).toList();
 
       for (final r in filtered) {
         if (r.lat == null || r.lng == null) continue;
         markers.add(Marker(
           markerId: MarkerId('race_${r.id}'),
           position: LatLng(r.lat!, r.lng!),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
           onTap: () => setState(() {
             _selectedRace = r;
             _selectedParkrun = null;
@@ -323,6 +350,8 @@ class _MapScreenState extends State<MapScreen> {
                         _filterChip('Parkruns', _MapFilter.parkruns),
                         const SizedBox(width: 8),
                         _filterChip('Races', _MapFilter.races),
+                        const SizedBox(width: 8),
+                        _monthChip(),
                         const Spacer(),
                         // Add race button
                         GestureDetector(
@@ -377,9 +406,7 @@ class _MapScreenState extends State<MapScreen> {
                   children: [
                     _legendBadge(Colors.green, 'Parkrun'),
                     const SizedBox(height: 6),
-                    _legendBadge(Colors.orange, 'Event'),
-                    const SizedBox(height: 6),
-                    _legendBadge(AppTheme.accent, 'Community'),
+                    _legendBadge(Colors.orange, 'Race'),
                   ],
                 ),
               ),
@@ -434,6 +461,55 @@ class _MapScreenState extends State<MapScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _monthChip() {
+    final label = _filterMonth == null
+        ? 'Any date'
+        : DateFormat('MMM yyyy').format(_filterMonth!);
+    final active = _filterMonth != null;
+    return GestureDetector(
+      onTap: _pickMonth,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: active ? AppTheme.accent.withValues(alpha: 0.15) : AppTheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: active ? AppTheme.accent : AppTheme.divider.withValues(alpha: 0.8),
+          ),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 4),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.calendar_today_outlined,
+                size: 12,
+                color: active ? AppTheme.accent : AppTheme.textSecondary),
+            const SizedBox(width: 5),
+            Text(label,
+                style: TextStyle(
+                  color: active ? AppTheme.accent : AppTheme.textPrimary,
+                  fontSize: 13,
+                  fontWeight: active ? FontWeight.w600 : FontWeight.normal,
+                )),
+            if (active) ...[
+              const SizedBox(width: 5),
+              GestureDetector(
+                onTap: () {
+                  setState(() => _filterMonth = null);
+                  _rebuildMarkers();
+                },
+                child: const Icon(Icons.close,
+                    size: 13, color: AppTheme.textSecondary),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
