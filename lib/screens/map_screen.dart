@@ -33,8 +33,9 @@ class _MapScreenState extends State<MapScreen> {
   String _searchQuery = '';
   final TextEditingController _searchCtrl = TextEditingController();
 
-  // Date range filter — null means "upcoming / all"
-  DateTime? _filterMonth; // first day of selected month
+  // Date range filter — both null means "upcoming only"
+  DateTime? _filterStart;
+  DateTime? _filterEnd;
 
   // Selected item for bottom sheet
   Map<String, dynamic>? _selectedParkrun;
@@ -77,34 +78,168 @@ class _MapScreenState extends State<MapScreen> {
     _rebuildMarkers();
   }
 
-  Future<void> _pickMonth() async {
+  String get _filterLabel {
+    if (_filterStart == null) return 'Any date';
+    final isWholeMonth = _filterEnd != null &&
+        _filterStart!.day == 1 &&
+        _filterEnd == DateTime(_filterStart!.year, _filterStart!.month + 1, 0);
+    if (isWholeMonth) return DateFormat('MMM yyyy').format(_filterStart!);
+    if (_filterEnd == null) return DateFormat('d MMM yy').format(_filterStart!);
+    return '${DateFormat('d MMM').format(_filterStart!)} – ${DateFormat('d MMM yy').format(_filterEnd!)}';
+  }
+
+  bool _inFilterRange(DateTime date) {
+    if (_filterStart == null) return date.isAfter(DateTime.now());
+    final d = DateTime(date.year, date.month, date.day);
+    final start = DateTime(_filterStart!.year, _filterStart!.month, _filterStart!.day);
+    final end = _filterEnd != null
+        ? DateTime(_filterEnd!.year, _filterEnd!.month, _filterEnd!.day)
+        : start;
+    return !d.isBefore(start) && !d.isAfter(end);
+  }
+
+  void _selectMonth(DateTime month) {
+    final lastDay = DateTime(month.year, month.month + 1, 0);
+    setState(() {
+      _filterStart = DateTime(month.year, month.month, 1);
+      _filterEnd = lastDay;
+    });
+    _rebuildMarkers();
+    Navigator.pop(context);
+  }
+
+  Future<void> _pickCustomRange() async {
+    Navigator.pop(context); // close the bottom sheet first
     final now = DateTime.now();
-    final initial = _filterMonth ?? DateTime(now.year, now.month);
-    final picked = await showDatePicker(
+    final range = await showDateRangePicker(
       context: context,
-      initialDate: initial,
-      firstDate: DateTime(now.year, now.month),
-      lastDate: DateTime(now.year + 3, 12),
-      helpText: 'Select month',
+      firstDate: now,
+      lastDate: DateTime(now.year + 3, 12, 31),
+      initialDateRange: _filterStart != null && _filterEnd != null
+          ? DateTimeRange(start: _filterStart!, end: _filterEnd!)
+          : null,
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
           colorScheme: ColorScheme.dark(
             primary: AppTheme.primary,
             surface: AppTheme.surface,
+            onSurface: AppTheme.textPrimary,
           ),
         ),
         child: child!,
       ),
     );
-    if (picked == null) return;
-    setState(() => _filterMonth = DateTime(picked.year, picked.month));
+    if (range == null) return;
+    setState(() {
+      _filterStart = range.start;
+      _filterEnd = range.end;
+    });
     _rebuildMarkers();
   }
 
-  bool _inFilterMonth(DateTime date) {
-    if (_filterMonth == null) return date.isAfter(DateTime.now());
-    return date.year == _filterMonth!.year &&
-        date.month == _filterMonth!.month;
+  void _showDateFilter() {
+    final now = DateTime.now();
+    final months = List.generate(
+      13,
+      (i) => DateTime(now.year, now.month + i),
+    );
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text('Filter by date',
+                    style: TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700)),
+                const Spacer(),
+                if (_filterStart != null)
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _filterStart = null;
+                        _filterEnd = null;
+                      });
+                      _rebuildMarkers();
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text('Clear',
+                        style: TextStyle(color: AppTheme.textSecondary)),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text('Select a month',
+                style: TextStyle(
+                    color: AppTheme.textSecondary, fontSize: 13)),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: months.map((m) {
+                final isSelected = _filterStart != null &&
+                    _filterStart!.year == m.year &&
+                    _filterStart!.month == m.month &&
+                    _filterEnd ==
+                        DateTime(m.year, m.month + 1, 0);
+                return GestureDetector(
+                  onTap: () => _selectMonth(m),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppTheme.primary
+                          : AppTheme.background,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isSelected
+                            ? AppTheme.primary
+                            : AppTheme.divider,
+                      ),
+                    ),
+                    child: Text(
+                      DateFormat('MMM yyyy').format(m),
+                      style: TextStyle(
+                        color: isSelected
+                            ? Colors.white
+                            : AppTheme.textPrimary,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.normal,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: _pickCustomRange,
+              icon: const Icon(Icons.date_range_outlined, size: 16),
+              label: const Text('Custom date range'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.textPrimary,
+                side: const BorderSide(color: AppTheme.divider),
+                minimumSize: const Size(double.infinity, 44),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _rebuildMarkers() {
@@ -147,7 +282,7 @@ class _MapScreenState extends State<MapScreen> {
     if (_filter != _MapFilter.parkruns) {
       final filtered = _eventData.where((e) {
         final d = DateTime.tryParse(e['startDate'] ?? '');
-        if (d == null || !_inFilterMonth(d)) return false;
+        if (d == null || !_inFilterRange(d)) return false;
         if (_searchQuery.isEmpty) return true;
         final q = _searchQuery.toLowerCase();
         return (e['name'] as String).toLowerCase().contains(q) ||
@@ -177,7 +312,7 @@ class _MapScreenState extends State<MapScreen> {
     // Race markers (Firestore)
     if (_filter != _MapFilter.parkruns) {
       final filtered = _races.where((r) {
-        if (!_inFilterMonth(r.date)) return false;
+        if (!_inFilterRange(r.date)) return false;
         if (_searchQuery.isEmpty) return true;
         final q = _searchQuery.toLowerCase();
         return r.name.toLowerCase().contains(q) ||
@@ -465,12 +600,10 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Widget _monthChip() {
-    final label = _filterMonth == null
-        ? 'Any date'
-        : DateFormat('MMM yyyy').format(_filterMonth!);
-    final active = _filterMonth != null;
+    final active = _filterStart != null;
+    final label = active ? _filterLabel : 'Any date';
     return GestureDetector(
-      onTap: _pickMonth,
+      onTap: _showDateFilter,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
@@ -500,7 +633,7 @@ class _MapScreenState extends State<MapScreen> {
               const SizedBox(width: 5),
               GestureDetector(
                 onTap: () {
-                  setState(() => _filterMonth = null);
+                  setState(() { _filterStart = null; _filterEnd = null; });
                   _rebuildMarkers();
                 },
                 child: const Icon(Icons.close,
