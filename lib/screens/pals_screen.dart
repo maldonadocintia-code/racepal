@@ -106,6 +106,7 @@ class _PalsScreenState extends State<PalsScreen>
               return _UserList(
                 users: snap.data ?? [],
                 emptyMessage: 'No followers yet.',
+                showFollowButton: true,
               );
             },
           ),
@@ -242,13 +243,31 @@ class _FoundUserTileState extends State<_FoundUserTile> {
   }
 
   Future<void> _loadStatus() async {
-    final status =
-        await context.read<AppProvider>().getFollowStatus(widget.user.uid);
-    if (mounted) setState(() => _status = status);
+    try {
+      final status =
+          await context.read<AppProvider>().getFollowStatus(widget.user.uid);
+      if (mounted) setState(() => _status = status);
+    } catch (_) {
+      // If the status check fails for any reason, still show a usable
+      // Follow button rather than an endless spinner.
+      if (mounted) setState(() => _status = FollowStatus.none);
+    }
   }
 
   Future<void> _toggle() async {
-    await context.read<AppProvider>().toggleFollow(widget.user);
+    final previous = _status;
+    setState(() => _status = null);
+    try {
+      await context.read<AppProvider>().toggleFollow(widget.user);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _status = previous);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not update. Try again.')),
+        );
+        return;
+      }
+    }
     await _loadStatus();
   }
 
@@ -316,8 +335,15 @@ class _FoundUserTileState extends State<_FoundUserTile> {
 class _UserList extends StatelessWidget {
   final List<AppUser> users;
   final String emptyMessage;
+  // When true, each row shows a Follow / Following button (used on the
+  // Followers tab so you can follow back and become pals).
+  final bool showFollowButton;
 
-  const _UserList({required this.users, required this.emptyMessage});
+  const _UserList({
+    required this.users,
+    required this.emptyMessage,
+    this.showFollowButton = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -343,7 +369,9 @@ class _UserList extends StatelessWidget {
       itemCount: users.length,
       separatorBuilder: (_, __) =>
           const Divider(height: 1, color: AppTheme.divider, indent: 72),
-      itemBuilder: (ctx, i) => _PalTile(user: users[i]),
+      itemBuilder: (ctx, i) => showFollowButton
+          ? _FoundUserTile(user: users[i])
+          : _PalTile(user: users[i]),
     );
   }
 }

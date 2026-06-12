@@ -37,6 +37,8 @@ class _MapScreenState extends State<MapScreen> {
   DateTime? _filterStart;
   DateTime? _filterEnd;
 
+  bool _isListView = false;
+
   // Selected item for bottom sheet
   Map<String, dynamic>? _selectedParkrun;
   Map<String, dynamic>? _selectedEvent;
@@ -247,98 +249,93 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  // ── Shared filtering (used by both map markers and list view) ──────────────
+
+  List<Map<String, dynamic>> _filteredParkruns() {
+    if (_filter == _MapFilter.races) return const [];
+    final q = _searchQuery.toLowerCase();
+    return _parkrunData.where((p) {
+      if (p['lat'] == null || p['lng'] == null) return false;
+      if (q.isEmpty) return true;
+      return (p['name'] as String).toLowerCase().contains(q) ||
+          (p['location'] as String).toLowerCase().contains(q);
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> _filteredEvents() {
+    if (_filter == _MapFilter.parkruns) return const [];
+    final q = _searchQuery.toLowerCase();
+    return _eventData.where((e) {
+      if (e['lat'] == null || e['lng'] == null) return false;
+      final d = DateTime.tryParse(e['startDate'] ?? '');
+      if (d == null || !_inFilterRange(d)) return false;
+      if (q.isEmpty) return true;
+      return (e['name'] as String).toLowerCase().contains(q) ||
+          ((e['city'] ?? '') as String).toLowerCase().contains(q);
+    }).toList();
+  }
+
+  List<Race> _filteredRaces() {
+    if (_filter == _MapFilter.parkruns) return const [];
+    final q = _searchQuery.toLowerCase();
+    return _races.where((r) {
+      if (r.lat == null || r.lng == null) return false;
+      if (!_inFilterRange(r.date)) return false;
+      if (q.isEmpty) return true;
+      return r.name.toLowerCase().contains(q) ||
+          r.location.toLowerCase().contains(q);
+    }).toList();
+  }
+
   void _rebuildMarkers() {
     final markers = <Marker>{};
 
-    // Parkrun markers
-    if (_filter != _MapFilter.races) {
-      final filtered = _searchQuery.isEmpty
-          ? _parkrunData
-          : _parkrunData
-              .where((p) =>
-                  (p['name'] as String)
-                      .toLowerCase()
-                      .contains(_searchQuery.toLowerCase()) ||
-                  (p['location'] as String)
-                      .toLowerCase()
-                      .contains(_searchQuery.toLowerCase()))
-              .toList();
-
-      for (final p in filtered) {
-        if (p['lat'] == null || p['lng'] == null) continue;
-        final id = p['id'] as String;
-        markers.add(Marker(
-          markerId: MarkerId('pr_$id'),
-          position: LatLng(
-            (p['lat'] as num).toDouble(),
-            (p['lng'] as num).toDouble(),
-          ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-          onTap: () => setState(() {
-            _selectedParkrun = p;
-            _selectedEvent = null;
-            _selectedRace = null;
-          }),
-        ));
-      }
+    for (final p in _filteredParkruns()) {
+      markers.add(Marker(
+        markerId: MarkerId('pr_${p['id']}'),
+        position: LatLng(
+          (p['lat'] as num).toDouble(),
+          (p['lng'] as num).toDouble(),
+        ),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        onTap: () => setState(() {
+          _selectedParkrun = p;
+          _selectedEvent = null;
+          _selectedRace = null;
+        }),
+      ));
     }
 
-    // Findarace event markers
-    if (_filter != _MapFilter.parkruns) {
-      final filtered = _eventData.where((e) {
-        final d = DateTime.tryParse(e['startDate'] ?? '');
-        if (d == null || !_inFilterRange(d)) return false;
-        if (_searchQuery.isEmpty) return true;
-        final q = _searchQuery.toLowerCase();
-        return (e['name'] as String).toLowerCase().contains(q) ||
-            ((e['city'] ?? '') as String).toLowerCase().contains(q);
-      }).toList();
-
-      for (var i = 0; i < filtered.length; i++) {
-        final e = filtered[i];
-        if (e['lat'] == null || e['lng'] == null) continue;
-        markers.add(Marker(
-          markerId: MarkerId('fa_${e['url']}'),
-          position: LatLng(
-            (e['lat'] as num).toDouble(),
-            (e['lng'] as num).toDouble(),
-          ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueOrange),
-          onTap: () => setState(() {
-            _selectedEvent = e;
-            _selectedParkrun = null;
-            _selectedRace = null;
-          }),
-        ));
-      }
+    for (final e in _filteredEvents()) {
+      markers.add(Marker(
+        markerId: MarkerId('fa_${e['url']}'),
+        position: LatLng(
+          (e['lat'] as num).toDouble(),
+          (e['lng'] as num).toDouble(),
+        ),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+        onTap: () => setState(() {
+          _selectedEvent = e;
+          _selectedParkrun = null;
+          _selectedRace = null;
+        }),
+      ));
     }
 
-    // Race markers (Firestore)
-    if (_filter != _MapFilter.parkruns) {
-      final filtered = _races.where((r) {
-        if (!_inFilterRange(r.date)) return false;
-        if (_searchQuery.isEmpty) return true;
-        final q = _searchQuery.toLowerCase();
-        return r.name.toLowerCase().contains(q) ||
-            r.location.toLowerCase().contains(q);
-      }).toList();
-
-      for (final r in filtered) {
-        if (r.lat == null || r.lng == null) continue;
-        markers.add(Marker(
-          markerId: MarkerId('race_${r.id}'),
-          position: LatLng(r.lat!, r.lng!),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
-          onTap: () => setState(() {
-            _selectedRace = r;
-            _selectedParkrun = null;
-            _selectedEvent = null;
-          }),
-        ));
-      }
+    for (final r in _filteredRaces()) {
+      markers.add(Marker(
+        markerId: MarkerId('race_${r.id}'),
+        position: LatLng(r.lat!, r.lng!),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+        onTap: () => setState(() {
+          _selectedRace = r;
+          _selectedParkrun = null;
+          _selectedEvent = null;
+        }),
+      ));
     }
 
+    if (!mounted) return;
     setState(() => _markers
       ..clear()
       ..addAll(markers));
@@ -364,23 +361,88 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _attendParkrun(Map<String, dynamic> p) async {
-    // parkruns are every Saturday at 9am — use the next one
-    final now = DateTime.now();
-    var d = DateTime(now.year, now.month, now.day, 9);
-    do {
-      d = d.add(const Duration(days: 1));
-    } while (d.weekday != DateTime.saturday);
+    final date = await _pickParkrunDate();
+    if (date == null) return;
     await _markGoing(Race(
-      id: 'pr_${p['id']}_${DateFormat('yyyyMMdd').format(d)}',
+      id: 'pr_${p['id']}_${DateFormat('yyyyMMdd').format(date)}',
       name: '${p['name']} parkrun',
       location: p['location'] ?? '',
       type: 'parkrun',
       category: RaceCategory.parkrun,
-      date: d,
+      date: date,
       lat: (p['lat'] as num?)?.toDouble(),
       lng: (p['lng'] as num?)?.toDouble(),
       createdBy: 'system',
     ));
+  }
+
+  /// Lets the user choose which Saturday they're planning to run — not just
+  /// the next one. Returns null if dismissed.
+  Future<DateTime?> _pickParkrunDate() async {
+    final now = DateTime.now();
+    final saturdays = <DateTime>[];
+    var cursor = DateTime(now.year, now.month, now.day, 9);
+    while (saturdays.length < 16) {
+      if (cursor.weekday == DateTime.saturday &&
+          cursor.isAfter(now.subtract(const Duration(hours: 2)))) {
+        saturdays.add(cursor);
+      }
+      cursor = cursor.add(const Duration(days: 1));
+    }
+
+    return showModalBottomSheet<DateTime>(
+      context: context,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.divider,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Which Saturday are you running?',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 16)),
+              ),
+            ),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: saturdays.length,
+                itemBuilder: (_, i) {
+                  final s = saturdays[i];
+                  return ListTile(
+                    leading: const Icon(Icons.event_available_outlined,
+                        color: AppTheme.primary),
+                    title: Text(DateFormat('EEE d MMM yyyy').format(s)),
+                    subtitle: Text(i == 0
+                        ? 'This Saturday'
+                        : i == 1
+                            ? 'Next Saturday'
+                            : 'In ${i + 1} weeks'),
+                    onTap: () => Navigator.pop(ctx, s),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _attendEvent(Map<String, dynamic> e) async {
@@ -414,26 +476,43 @@ class _MapScreenState extends State<MapScreen> {
         }
 
         return Scaffold(
+          floatingActionButton: _isListView
+              ? null
+              : FloatingActionButton.extended(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AddRaceScreen()),
+                  ),
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  icon: const Icon(Icons.add_location_alt_outlined),
+                  label: const Text('Add race'),
+                ),
           body: Stack(
             children: [
-              // Full-screen map
-              GoogleMap(
-                initialCameraPosition: const CameraPosition(
-                  target: _ukCenter,
-                  zoom: 6.0,
+              // Full-screen map (hidden in list view so no map tiles load)
+              if (!_isListView)
+                GoogleMap(
+                  initialCameraPosition: const CameraPosition(
+                    target: _ukCenter,
+                    zoom: 6.0,
+                  ),
+                  onMapCreated: (c) => _mapController = c,
+                  markers: _markers,
+                  myLocationButtonEnabled: true,
+                  myLocationEnabled: true,
+                  mapToolbarEnabled: false,
+                  zoomControlsEnabled: false,
+                  onTap: (_) => setState(() {
+                    _selectedParkrun = null;
+                    _selectedEvent = null;
+                    _selectedRace = null;
+                  }),
+                )
+              else
+                Positioned.fill(
+                  child: _buildListView(),
                 ),
-                onMapCreated: (c) => _mapController = c,
-                markers: _markers,
-                myLocationButtonEnabled: true,
-                myLocationEnabled: true,
-                mapToolbarEnabled: false,
-                zoomControlsEnabled: false,
-                onTap: (_) => setState(() {
-                  _selectedParkrun = null;
-                  _selectedEvent = null;
-                  _selectedRace = null;
-                }),
-              ),
 
               // Search + filter bar
               Positioned(
@@ -482,47 +561,24 @@ class _MapScreenState extends State<MapScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    // Filter chips
+                    // Filter chips — horizontally scrollable so they never
+                    // overflow or crowd the screen.
                     Row(
                       children: [
-                        _filterChip('Both', _MapFilter.both),
+                        _viewToggle(),
                         const SizedBox(width: 8),
-                        _filterChip('Parkruns', _MapFilter.parkruns),
-                        const SizedBox(width: 8),
-                        _filterChip('Races', _MapFilter.races),
-                        const SizedBox(width: 8),
-                        _monthChip(),
-                        const Spacer(),
-                        // Add race button
-                        GestureDetector(
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const AddRaceScreen()),
-                          ),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primary,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.3),
-                                  blurRadius: 4,
-                                )
-                              ],
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
+                        Expanded(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
                               children: [
-                                Icon(Icons.add, size: 14, color: Colors.white),
-                                SizedBox(width: 4),
-                                Text('Add race',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600)),
+                                _filterChip('Both', _MapFilter.both),
+                                const SizedBox(width: 8),
+                                _filterChip('Parkruns', _MapFilter.parkruns),
+                                const SizedBox(width: 8),
+                                _filterChip('Races', _MapFilter.races),
+                                const SizedBox(width: 8),
+                                _monthChip(),
                               ],
                             ),
                           ),
@@ -533,23 +589,24 @@ class _MapScreenState extends State<MapScreen> {
                 ),
               ),
 
-              // Legend
-              Positioned(
-                bottom: _selectedParkrun != null ||
-                        _selectedRace != null ||
-                        _selectedEvent != null
-                    ? 220
-                    : 24,
-                right: 12,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    _legendBadge(Colors.green, 'Parkrun'),
-                    const SizedBox(height: 6),
-                    _legendBadge(Colors.orange, 'Race'),
-                  ],
+              // Legend (map view only)
+              if (!_isListView)
+                Positioned(
+                  bottom: _selectedParkrun != null ||
+                          _selectedRace != null ||
+                          _selectedEvent != null
+                      ? 220
+                      : 88,
+                  right: 12,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _legendBadge(Colors.green, 'Parkrun'),
+                      const SizedBox(height: 6),
+                      _legendBadge(Colors.orange, 'Race'),
+                    ],
+                  ),
                 ),
-              ),
 
               // Selected parkrun panel
               if (_selectedParkrun != null)
@@ -711,6 +768,184 @@ class _MapScreenState extends State<MapScreen> {
           ],
         ),
       );
+
+  Widget _viewToggle() {
+    return GestureDetector(
+      onTap: () => setState(() => _isListView = !_isListView),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.25), blurRadius: 6),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(_isListView ? Icons.map_outlined : Icons.format_list_bulleted,
+                size: 16, color: AppTheme.primary),
+            const SizedBox(width: 4),
+            Text(_isListView ? 'Map' : 'List',
+                style: const TextStyle(
+                    color: AppTheme.primary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildListView() {
+    final entries = <_ListEntry>[];
+
+    // Parkruns happen every Saturday — use the next one for sorting.
+    final now = DateTime.now();
+    var nextSat = DateTime(now.year, now.month, now.day, 9);
+    while (nextSat.weekday != DateTime.saturday) {
+      nextSat = nextSat.add(const Duration(days: 1));
+    }
+
+    for (final p in _filteredParkruns()) {
+      entries.add(_ListEntry(
+        date: nextSat,
+        title: '${p['name']} parkrun',
+        subtitle: (p['location'] ?? '') as String,
+        dateLabel: 'Saturdays · 9:00am',
+        typeLabel: 'Parkrun',
+        color: Colors.green,
+        onTap: () => setState(() {
+          _selectedParkrun = p;
+          _selectedEvent = null;
+          _selectedRace = null;
+        }),
+      ));
+    }
+    for (final e in _filteredEvents()) {
+      final d = DateTime.parse(e['startDate']);
+      entries.add(_ListEntry(
+        date: d,
+        title: (e['name'] ?? '') as String,
+        subtitle: (e['city'] ?? '') as String,
+        dateLabel: DateFormat('EEE d MMM yyyy').format(d),
+        typeLabel: 'Race',
+        color: Colors.orange,
+        onTap: () => setState(() {
+          _selectedEvent = e;
+          _selectedParkrun = null;
+          _selectedRace = null;
+        }),
+      ));
+    }
+    for (final r in _filteredRaces()) {
+      entries.add(_ListEntry(
+        date: r.date,
+        title: r.name,
+        subtitle: r.location,
+        dateLabel: DateFormat('EEE d MMM yyyy').format(r.date),
+        typeLabel: r.type,
+        color: Colors.orange,
+        onTap: () => setState(() {
+          _selectedRace = r;
+          _selectedParkrun = null;
+          _selectedEvent = null;
+        }),
+      ));
+    }
+    entries.sort((a, b) => a.date.compareTo(b.date));
+
+    final topPad = MediaQuery.of(context).padding.top + 116;
+
+    if (entries.isEmpty) {
+      return Container(
+        color: AppTheme.background,
+        padding: EdgeInsets.fromLTRB(24, topPad, 24, 24),
+        alignment: Alignment.topCenter,
+        child: const Text(
+          'No races or parkruns match your filters.\nTry a different date or search.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppTheme.textSecondary),
+        ),
+      );
+    }
+
+    return Container(
+      color: AppTheme.background,
+      child: ListView.separated(
+        padding: EdgeInsets.fromLTRB(12, topPad, 12, 24),
+        itemCount: entries.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (_, i) => _listTile(entries[i]),
+      ),
+    );
+  }
+
+  Widget _listTile(_ListEntry e) {
+    return GestureDetector(
+      onTap: e.onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppTheme.divider),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(color: e.color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(e.title,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 15),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 2),
+                  Text('${e.dateLabel}  ·  ${e.subtitle}',
+                      style: const TextStyle(
+                          color: AppTheme.textSecondary, fontSize: 13),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One row in the map's list view.
+class _ListEntry {
+  final DateTime date;
+  final String title;
+  final String subtitle;
+  final String dateLabel;
+  final String typeLabel;
+  final Color color;
+  final VoidCallback onTap;
+
+  _ListEntry({
+    required this.date,
+    required this.title,
+    required this.subtitle,
+    required this.dateLabel,
+    required this.typeLabel,
+    required this.color,
+    required this.onTap,
+  });
 }
 
 // ── Parkrun detail panel ───────────────────────────────────────────────────
@@ -798,7 +1033,7 @@ class _ParkrunPanel extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: onAttend,
-              child: const Text("I'm doing this Saturday"),
+              child: const Text("I'm doing this"),
             ),
           ),
         ],
@@ -854,7 +1089,10 @@ class _EventPanel extends StatelessWidget {
               ),
               if (price != null) ...[
                 const SizedBox(width: 8),
-                Text('£${(price as num).toStringAsFixed(2)}',
+                Text(
+                    price is num
+                        ? '£${price.toStringAsFixed(0)}'
+                        : price.toString(),
                     style: const TextStyle(
                         color: AppTheme.textSecondary,
                         fontSize: 12,

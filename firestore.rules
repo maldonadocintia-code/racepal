@@ -76,7 +76,11 @@ service cloud.firestore {
 
     // ── Follow requests ───────────────────────────────────────────────────────
     match /follow_requests/{docId} {
+      // resource == null covers reads of a not-yet-existing request doc
+      // (the common case when checking follow status) — without this the
+      // rule errors on the null resource and denies the read.
       allow read: if isSignedIn() && (
+        resource == null ||
         request.auth.uid == resource.data.requesterUid ||
         request.auth.uid == resource.data.targetUid
       );
