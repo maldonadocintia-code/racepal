@@ -27,7 +27,14 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if isSignedIn();
       allow create: if isOwner(uid);
-      allow update: if isOwner(uid);
+      // Owner can update any field. Other signed-in users may only adjust the
+      // denormalised follower/following counts — needed because follow /
+      // unfollow / accept-request batches touch both users' docs at once.
+      allow update: if isOwner(uid) || (
+        isSignedIn() &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['followersCount', 'followingCount'])
+      );
       allow delete: if false;
     }
 
@@ -68,10 +75,18 @@ service cloud.firestore {
     // ── Follows ───────────────────────────────────────────────────────────────
     match /follows/{docId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() &&
-        request.auth.uid == request.resource.data.followerUid;
-      allow delete: if isSignedIn() &&
-        request.auth.uid == resource.data.followerUid;
+      // The follower creates a direct follow; the target creates the follow
+      // when accepting a request (acceptRequest writes on their behalf).
+      allow create: if isSignedIn() && (
+        request.auth.uid == request.resource.data.followerUid ||
+        request.auth.uid == request.resource.data.followingUid
+      );
+      // Either side can delete: the follower unfollows, or the target removes
+      // a follower.
+      allow delete: if isSignedIn() && (
+        request.auth.uid == resource.data.followerUid ||
+        request.auth.uid == resource.data.followingUid
+      );
     }
 
     // ── Follow requests ───────────────────────────────────────────────────────

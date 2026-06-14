@@ -6,6 +6,7 @@ import '../services/app_provider.dart';
 import '../models/race_model.dart';
 import '../models/review_model.dart';
 import '../widgets/shared_widgets.dart';
+import '../widgets/parkrun_helpers.dart';
 import '../theme.dart';
 
 class RaceDetailScreen extends StatelessWidget {
@@ -103,7 +104,9 @@ class _RaceDetailBody extends StatelessWidget {
                       const Icon(Icons.calendar_today, size: 16, color: Colors.white70),
                       const SizedBox(width: 4),
                       Text(
-                        DateFormat('EEEE, d MMMM yyyy').format(race.date),
+                        race.isParkrun
+                            ? 'Every Saturday · 9:00am'
+                            : DateFormat('EEEE, d MMMM yyyy').format(race.date),
                         style: const TextStyle(color: Colors.white70, fontSize: 14),
                       ),
                     ],
@@ -131,6 +134,9 @@ class _RaceDetailBody extends StatelessWidget {
               child: _AttendanceRow(race: race, uid: uid),
             ),
 
+            // Pals going / attended (per-date; not shown for parkrun venue doc)
+            if (!race.isParkrun) _PalsSection(raceId: race.id, uid: uid),
+
             if (race.description != null) ...[
               _section('About', Padding(
                 padding: const EdgeInsets.all(16),
@@ -153,11 +159,12 @@ class _RaceDetailBody extends StatelessWidget {
                 ),
               ),
 
-            // Attendees
-            _section(
-              'Who\'s going (${race.attendeeCount})',
-              _AttendeesList(raceId: race.id),
-            ),
+            // Attendees (per-date; not shown for parkrun venue doc)
+            if (!race.isParkrun)
+              _section(
+                'Who\'s going (${race.attendeeCount})',
+                _AttendeesList(raceId: race.id),
+              ),
 
             // Reviews
             _section(
@@ -288,6 +295,36 @@ class _AttendanceRowState extends State<_AttendanceRow> {
 
   @override
   Widget build(BuildContext context) {
+    // Parkruns plan a specific Saturday (per-date) rather than a one-off
+    // Going/Attended on the venue doc — keeps the calendar accurate.
+    if (widget.race.isParkrun) {
+      return Row(
+        children: [
+          _btn(
+            label: 'Plan a date',
+            icon: Icons.event_available_outlined,
+            active: false,
+            onTap: () => planParkrunDate(
+              context,
+              venueId: widget.race.id,
+              name: widget.race.name,
+              location: widget.race.location,
+              lat: widget.race.lat,
+              lng: widget.race.lng,
+            ),
+          ),
+          const SizedBox(width: 10),
+          _btn(
+            label: 'Review',
+            icon: Icons.bolt,
+            active: false,
+            onTap: () => _showReviewSheet(context),
+            accent: true,
+          ),
+        ],
+      );
+    }
+
     final status = _attendance?.status;
 
     // Row adapts to current status:
@@ -401,6 +438,134 @@ class _AttendanceRowState extends State<_AttendanceRow> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => ReviewSheet(race: widget.race),
+    );
+  }
+}
+
+class _PalsSection extends StatefulWidget {
+  final String raceId;
+  final String uid;
+  const _PalsSection({required this.raceId, required this.uid});
+
+  @override
+  State<_PalsSection> createState() => _PalsSectionState();
+}
+
+class _PalsSectionState extends State<_PalsSection> {
+  Set<String> _palUids = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPals();
+  }
+
+  Future<void> _loadPals() async {
+    final provider = context.read<AppProvider>();
+    final pals = await provider.followService.getPals(widget.uid);
+    if (mounted) setState(() => _palUids = pals.map((p) => p.uid).toSet());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_palUids.isEmpty) return const SizedBox.shrink();
+
+    final provider = context.read<AppProvider>();
+    return StreamBuilder<List<Attendance>>(
+      stream: provider.raceService.raceAttendees(widget.raceId),
+      builder: (ctx, snap) {
+        final palAttendances = (snap.data ?? [])
+            .where((a) => _palUids.contains(a.userId))
+            .toList();
+
+        if (palAttendances.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Row(
+                children: [
+                  const Text(
+                    'Pals',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 17,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${palAttendances.length}',
+                      style: const TextStyle(
+                        color: AppTheme.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 80,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: palAttendances.length,
+                itemBuilder: (_, i) {
+                  final a = palAttendances[i];
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: FutureBuilder(
+                      future: provider.authService.getUser(a.userId),
+                      builder: (_, userSnap) {
+                        final u = userSnap.data;
+                        return Column(
+                          children: [
+                            UserAvatar(
+                              photoUrl: u?.photoUrl,
+                              displayName: u?.displayName ?? '?',
+                              radius: 22,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              u?.displayName.split(' ').first ?? '...',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppTheme.textPrimary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Text(
+                              a.status == AttendanceStatus.going
+                                  ? 'Going'
+                                  : 'Been here',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: a.status == AttendanceStatus.going
+                                    ? AppTheme.primary
+                                    : AppTheme.accent,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

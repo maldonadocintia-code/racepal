@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/race_model.dart';
 import '../models/review_model.dart';
 import '../services/app_provider.dart';
+import '../widgets/parkrun_helpers.dart';
 import '../theme.dart';
 import 'race_detail_screen.dart';
 import 'add_race_screen.dart';
@@ -19,27 +20,32 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => _MapScreenState();
 }
 
-enum _MapFilter { both, parkruns, races }
+/// Two simple tabs — that's the whole top-level filter now.
+enum _Tab { parkruns, races }
 
 class _MapScreenState extends State<MapScreen> {
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
-  _MapFilter _filter = _MapFilter.both;
+
+  _Tab _tab = _Tab.parkruns;
+  bool _isListView = true; // list is the default — faster, no map-tile cost
+
   bool _parkrunsLoaded = false;
   bool _eventsLoaded = false;
   List<Map<String, dynamic>> _parkrunData = [];
   List<Map<String, dynamic>> _eventData = [];
   List<Race> _races = [];
+
   String _searchQuery = '';
   final TextEditingController _searchCtrl = TextEditingController();
 
-  // Date range filter — both null means "upcoming only"
-  DateTime? _filterStart;
-  DateTime? _filterEnd;
+  // Month filter — only used on the Races tab. null = upcoming (any month).
+  DateTime? _filterMonth;
 
-  bool _isListView = false;
+  // Community races stream, created once (not on every rebuild).
+  late final Stream<List<Race>> _racesStream;
 
-  // Selected item for bottom sheet
+  // Selected item for the bottom panel
   Map<String, dynamic>? _selectedParkrun;
   Map<String, dynamic>? _selectedEvent;
   Race? _selectedRace;
@@ -49,6 +55,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
+    _racesStream = context.read<AppProvider>().raceService.upcomingRaces();
     _loadParkruns();
     _loadEvents();
   }
@@ -72,9 +79,11 @@ class _MapScreenState extends State<MapScreen> {
     if (_eventsLoaded) return;
     final rawFindarace = await rootBundle.loadString('assets/findarace_uk.json');
     final rawMajor = await rootBundle.loadString('assets/major_races_uk.json');
-    final findaraceList = (jsonDecode(rawFindarace) as List).cast<Map<String, dynamic>>();
-    final majorList = (jsonDecode(rawMajor) as List).cast<Map<String, dynamic>>();
-    // Deduplicate by (name, startDate) then filter to valid dates
+    final findaraceList =
+        (jsonDecode(rawFindarace) as List).cast<Map<String, dynamic>>();
+    final majorList =
+        (jsonDecode(rawMajor) as List).cast<Map<String, dynamic>>();
+    // Deduplicate by (name, startDate) then keep only valid dates
     final seen = <String>{};
     _eventData = [...findaraceList, ...majorList].where((e) {
       final key = '${e['name']}_${e['startDate']}';
@@ -85,71 +94,126 @@ class _MapScreenState extends State<MapScreen> {
     _rebuildMarkers();
   }
 
-  String get _filterLabel {
-    if (_filterStart == null) return 'Any date';
-    final isWholeMonth = _filterEnd != null &&
-        _filterStart!.day == 1 &&
-        _filterEnd == DateTime(_filterStart!.year, _filterStart!.month + 1, 0);
-    if (isWholeMonth) return DateFormat('MMM yyyy').format(_filterStart!);
-    if (_filterEnd == null) return DateFormat('d MMM yy').format(_filterStart!);
-    return '${DateFormat('d MMM').format(_filterStart!)} – ${DateFormat('d MMM yy').format(_filterEnd!)}';
+  // ── Filtering ──────────────────────────────────────────────────────────────
+
+  bool _inMonth(DateTime date) {
+    if (_filterMonth == null) return date.isAfter(DateTime.now());
+    return date.year == _filterMonth!.year && date.month == _filterMonth!.month;
   }
 
-  bool _inFilterRange(DateTime date) {
-    if (_filterStart == null) return date.isAfter(DateTime.now());
-    final d = DateTime(date.year, date.month, date.day);
-    final start = DateTime(_filterStart!.year, _filterStart!.month, _filterStart!.day);
-    final end = _filterEnd != null
-        ? DateTime(_filterEnd!.year, _filterEnd!.month, _filterEnd!.day)
-        : start;
-    return !d.isBefore(start) && !d.isAfter(end);
+  List<Map<String, dynamic>> _filteredParkruns() {
+    final q = _searchQuery.toLowerCase();
+    return _parkrunData.where((p) {
+      if (p['lat'] == null || p['lng'] == null) return false;
+      if (q.isEmpty) return true;
+      return (p['name'] as String).toLowerCase().contains(q) ||
+          (p['location'] as String).toLowerCase().contains(q);
+    }).toList();
   }
 
-  void _selectMonth(DateTime month) {
-    final lastDay = DateTime(month.year, month.month + 1, 0);
-    setState(() {
-      _filterStart = DateTime(month.year, month.month, 1);
-      _filterEnd = lastDay;
-    });
-    _rebuildMarkers();
-    Navigator.pop(context);
+  List<Map<String, dynamic>> _filteredEvents() {
+    final q = _searchQuery.toLowerCase();
+    return _eventData.where((e) {
+      if (e['lat'] == null || e['lng'] == null) return false;
+      final d = DateTime.tryParse(e['startDate'] ?? '');
+      if (d == null || !_inMonth(d)) return false;
+      if (q.isEmpty) return true;
+      return (e['name'] as String).toLowerCase().contains(q) ||
+          ((e['city'] ?? '') as String).toLowerCase().contains(q);
+    }).toList();
   }
 
-  Future<void> _pickCustomRange() async {
-    Navigator.pop(context); // close the bottom sheet first
-    final now = DateTime.now();
-    final range = await showDateRangePicker(
-      context: context,
-      firstDate: now,
-      lastDate: DateTime(now.year + 3, 12, 31),
-      initialDateRange: _filterStart != null && _filterEnd != null
-          ? DateTimeRange(start: _filterStart!, end: _filterEnd!)
-          : null,
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: ColorScheme.dark(
-            primary: AppTheme.primary,
-            surface: AppTheme.surface,
-            onSurface: AppTheme.textPrimary,
+  List<Race> _filteredRaces() {
+    final q = _searchQuery.toLowerCase();
+    return _races.where((r) {
+      if (r.isParkrun) return false; // parkrun venue docs never show on Races
+      if (r.lat == null || r.lng == null) return false;
+      if (!_inMonth(r.date)) return false;
+      if (q.isEmpty) return true;
+      return r.name.toLowerCase().contains(q) ||
+          r.location.toLowerCase().contains(q);
+    }).toList();
+  }
+
+  // ── Markers ─────────────────────────────────────────────────────────────────
+
+  void _rebuildMarkers() {
+    final markers = <Marker>{};
+
+    if (_tab == _Tab.parkruns) {
+      for (final p in _filteredParkruns()) {
+        markers.add(Marker(
+          markerId: MarkerId('pr_${p['id']}'),
+          position: LatLng(
+            (p['lat'] as num).toDouble(),
+            (p['lng'] as num).toDouble(),
           ),
-        ),
-        child: child!,
-      ),
-    );
-    if (range == null) return;
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          onTap: () => setState(() {
+            _selectedParkrun = p;
+            _selectedEvent = null;
+            _selectedRace = null;
+          }),
+        ));
+      }
+    } else {
+      for (final e in _filteredEvents()) {
+        markers.add(Marker(
+          markerId: MarkerId('fa_${e['url']}'),
+          position: LatLng(
+            (e['lat'] as num).toDouble(),
+            (e['lng'] as num).toDouble(),
+          ),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+          onTap: () => setState(() {
+            _selectedEvent = e;
+            _selectedParkrun = null;
+            _selectedRace = null;
+          }),
+        ));
+      }
+      for (final r in _filteredRaces()) {
+        markers.add(Marker(
+          markerId: MarkerId('race_${r.id}'),
+          position: LatLng(r.lat!, r.lng!),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+          onTap: () => setState(() {
+            _selectedRace = r;
+            _selectedParkrun = null;
+            _selectedEvent = null;
+          }),
+        ));
+      }
+    }
+
+    if (!mounted) return;
+    setState(() => _markers
+      ..clear()
+      ..addAll(markers));
+  }
+
+  void _switchTab(_Tab tab) {
+    if (_tab == tab) return;
     setState(() {
-      _filterStart = range.start;
-      _filterEnd = range.end;
+      _tab = tab;
+      _selectedParkrun = null;
+      _selectedEvent = null;
+      _selectedRace = null;
     });
     _rebuildMarkers();
   }
 
-  void _showDateFilter() {
+  // ── Month filter (Races tab only) ────────────────────────────────────────────
+
+  String get _monthLabel =>
+      _filterMonth == null ? 'Any month' : DateFormat('MMM yyyy').format(_filterMonth!);
+
+  void _showMonthFilter() {
     final now = DateTime.now();
-    final months = List.generate(
-      13,
-      (i) => DateTime(now.year, now.month + i),
-    );
+    final months = List.generate(13, (i) => DateTime(now.year, now.month + i));
 
     showModalBottomSheet(
       context: context,
@@ -163,85 +227,33 @@ class _MapScreenState extends State<MapScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                const Text('Filter by date',
-                    style: TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700)),
-                const Spacer(),
-                if (_filterStart != null)
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _filterStart = null;
-                        _filterEnd = null;
-                      });
-                      _rebuildMarkers();
-                      Navigator.pop(ctx);
-                    },
-                    child: const Text('Clear',
-                        style: TextStyle(color: AppTheme.textSecondary)),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            const Text('Select a month',
+            const Text('Filter races by month',
                 style: TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 13)),
-            const SizedBox(height: 12),
+                    color: AppTheme.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700)),
+            const SizedBox(height: 14),
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: months.map((m) {
-                final isSelected = _filterStart != null &&
-                    _filterStart!.year == m.year &&
-                    _filterStart!.month == m.month &&
-                    _filterEnd ==
-                        DateTime(m.year, m.month + 1, 0);
-                return GestureDetector(
-                  onTap: () => _selectMonth(m),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppTheme.primary
-                          : AppTheme.background,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isSelected
-                            ? AppTheme.primary
-                            : AppTheme.divider,
-                      ),
-                    ),
-                    child: Text(
-                      DateFormat('MMM yyyy').format(m),
-                      style: TextStyle(
-                        color: isSelected
-                            ? Colors.white
-                            : AppTheme.textPrimary,
-                        fontWeight: isSelected
-                            ? FontWeight.w700
-                            : FontWeight.normal,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              onPressed: _pickCustomRange,
-              icon: const Icon(Icons.date_range_outlined, size: 16),
-              label: const Text('Custom date range'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.textPrimary,
-                side: const BorderSide(color: AppTheme.divider),
-                minimumSize: const Size(double.infinity, 44),
-              ),
+              children: [
+                _monthOption('Any month', _filterMonth == null, () {
+                  setState(() => _filterMonth = null);
+                  _rebuildMarkers();
+                  Navigator.pop(ctx);
+                }),
+                ...months.map((m) {
+                  final selected = _filterMonth != null &&
+                      _filterMonth!.year == m.year &&
+                      _filterMonth!.month == m.month;
+                  return _monthOption(
+                      DateFormat('MMM yyyy').format(m), selected, () {
+                    setState(() => _filterMonth = m);
+                    _rebuildMarkers();
+                    Navigator.pop(ctx);
+                  });
+                }),
+              ],
             ),
           ],
         ),
@@ -249,97 +261,28 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  // ── Shared filtering (used by both map markers and list view) ──────────────
-
-  List<Map<String, dynamic>> _filteredParkruns() {
-    if (_filter == _MapFilter.races) return const [];
-    final q = _searchQuery.toLowerCase();
-    return _parkrunData.where((p) {
-      if (p['lat'] == null || p['lng'] == null) return false;
-      if (q.isEmpty) return true;
-      return (p['name'] as String).toLowerCase().contains(q) ||
-          (p['location'] as String).toLowerCase().contains(q);
-    }).toList();
-  }
-
-  List<Map<String, dynamic>> _filteredEvents() {
-    if (_filter == _MapFilter.parkruns) return const [];
-    final q = _searchQuery.toLowerCase();
-    return _eventData.where((e) {
-      if (e['lat'] == null || e['lng'] == null) return false;
-      final d = DateTime.tryParse(e['startDate'] ?? '');
-      if (d == null || !_inFilterRange(d)) return false;
-      if (q.isEmpty) return true;
-      return (e['name'] as String).toLowerCase().contains(q) ||
-          ((e['city'] ?? '') as String).toLowerCase().contains(q);
-    }).toList();
-  }
-
-  List<Race> _filteredRaces() {
-    if (_filter == _MapFilter.parkruns) return const [];
-    final q = _searchQuery.toLowerCase();
-    return _races.where((r) {
-      if (r.lat == null || r.lng == null) return false;
-      if (!_inFilterRange(r.date)) return false;
-      if (q.isEmpty) return true;
-      return r.name.toLowerCase().contains(q) ||
-          r.location.toLowerCase().contains(q);
-    }).toList();
-  }
-
-  void _rebuildMarkers() {
-    final markers = <Marker>{};
-
-    for (final p in _filteredParkruns()) {
-      markers.add(Marker(
-        markerId: MarkerId('pr_${p['id']}'),
-        position: LatLng(
-          (p['lat'] as num).toDouble(),
-          (p['lng'] as num).toDouble(),
+  Widget _monthOption(String label, bool selected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? AppTheme.primary : AppTheme.background,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+              color: selected ? AppTheme.primary : AppTheme.divider),
         ),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-        onTap: () => setState(() {
-          _selectedParkrun = p;
-          _selectedEvent = null;
-          _selectedRace = null;
-        }),
-      ));
-    }
-
-    for (final e in _filteredEvents()) {
-      markers.add(Marker(
-        markerId: MarkerId('fa_${e['url']}'),
-        position: LatLng(
-          (e['lat'] as num).toDouble(),
-          (e['lng'] as num).toDouble(),
-        ),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
-        onTap: () => setState(() {
-          _selectedEvent = e;
-          _selectedParkrun = null;
-          _selectedRace = null;
-        }),
-      ));
-    }
-
-    for (final r in _filteredRaces()) {
-      markers.add(Marker(
-        markerId: MarkerId('race_${r.id}'),
-        position: LatLng(r.lat!, r.lng!),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
-        onTap: () => setState(() {
-          _selectedRace = r;
-          _selectedParkrun = null;
-          _selectedEvent = null;
-        }),
-      ));
-    }
-
-    if (!mounted) return;
-    setState(() => _markers
-      ..clear()
-      ..addAll(markers));
+        child: Text(label,
+            style: TextStyle(
+              color: selected ? Colors.white : AppTheme.textPrimary,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
+              fontSize: 13,
+            )),
+      ),
+    );
   }
+
+  // ── Attendance actions ───────────────────────────────────────────────────────
 
   Future<void> _markGoing(Race race) async {
     final provider = context.read<AppProvider>();
@@ -361,87 +304,36 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _attendParkrun(Map<String, dynamic> p) async {
-    final date = await _pickParkrunDate();
-    if (date == null) return;
-    await _markGoing(Race(
-      id: 'pr_${p['id']}_${DateFormat('yyyyMMdd').format(date)}',
+    await planParkrunDate(
+      context,
+      venueId: 'pr_${p['id']}',
+      name: '${p['name']} parkrun',
+      location: p['location'] ?? '',
+      lat: (p['lat'] as num?)?.toDouble(),
+      lng: (p['lng'] as num?)?.toDouble(),
+    );
+    if (mounted) setState(() => _selectedParkrun = null);
+  }
+
+  /// Ensures the stable venue doc exists, then opens its detail/reviews screen.
+  Future<void> _openParkrunDetails(Map<String, dynamic> p) async {
+    final venueId = 'pr_${p['id']}';
+    final venue = Race(
+      id: venueId,
       name: '${p['name']} parkrun',
       location: p['location'] ?? '',
       type: 'parkrun',
       category: RaceCategory.parkrun,
-      date: date,
+      date: _nextSaturday(),
       lat: (p['lat'] as num?)?.toDouble(),
       lng: (p['lng'] as num?)?.toDouble(),
       createdBy: 'system',
-    ));
-  }
-
-  /// Lets the user choose which Saturday they're planning to run — not just
-  /// the next one. Returns null if dismissed.
-  Future<DateTime?> _pickParkrunDate() async {
-    final now = DateTime.now();
-    final saturdays = <DateTime>[];
-    var cursor = DateTime(now.year, now.month, now.day, 9);
-    while (saturdays.length < 16) {
-      if (cursor.weekday == DateTime.saturday &&
-          cursor.isAfter(now.subtract(const Duration(hours: 2)))) {
-        saturdays.add(cursor);
-      }
-      cursor = cursor.add(const Duration(days: 1));
-    }
-
-    return showModalBottomSheet<DateTime>(
-      context: context,
-      backgroundColor: AppTheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 10),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppTheme.divider,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 16, 20, 4),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text('Which Saturday are you running?',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 16)),
-              ),
-            ),
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: saturdays.length,
-                itemBuilder: (_, i) {
-                  final s = saturdays[i];
-                  return ListTile(
-                    leading: const Icon(Icons.event_available_outlined,
-                        color: AppTheme.primary),
-                    title: Text(DateFormat('EEE d MMM yyyy').format(s)),
-                    subtitle: Text(i == 0
-                        ? 'This Saturday'
-                        : i == 1
-                            ? 'Next Saturday'
-                            : 'In ${i + 1} weeks'),
-                    onTap: () => Navigator.pop(ctx, s),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
+    );
+    await context.read<AppProvider>().raceService.ensureRace(venue);
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => RaceDetailScreen(raceId: venueId)),
     );
   }
 
@@ -462,35 +354,38 @@ class _MapScreenState extends State<MapScreen> {
     ));
   }
 
+  static DateTime _nextSaturday() {
+    final now = DateTime.now();
+    var d = DateTime(now.year, now.month, now.day, 9);
+    while (d.weekday != DateTime.saturday) {
+      d = d.add(const Duration(days: 1));
+    }
+    return d;
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
-    final provider = context.read<AppProvider>();
+    final isParkrunTab = _tab == _Tab.parkruns;
+    final panelOpen = _selectedParkrun != null ||
+        _selectedEvent != null ||
+        _selectedRace != null;
 
     return StreamBuilder<List<Race>>(
-      stream: provider.raceService.upcomingRaces(),
+      stream: _racesStream,
       builder: (ctx, snap) {
         final newRaces = snap.data ?? [];
         if (newRaces.length != _races.length) {
           _races = newRaces;
-          WidgetsBinding.instance.addPostFrameCallback((_) => _rebuildMarkers());
+          WidgetsBinding.instance
+              .addPostFrameCallback((_) => _rebuildMarkers());
         }
 
         return Scaffold(
-          floatingActionButton: _isListView
-              ? null
-              : FloatingActionButton.extended(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const AddRaceScreen()),
-                  ),
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: Colors.white,
-                  icon: const Icon(Icons.add_location_alt_outlined),
-                  label: const Text('Add race'),
-                ),
           body: Stack(
             children: [
-              // Full-screen map (hidden in list view so no map tiles load)
+              // Map (hidden in list view so no tiles load)
               if (!_isListView)
                 GoogleMap(
                   initialCameraPosition: const CameraPosition(
@@ -510,105 +405,45 @@ class _MapScreenState extends State<MapScreen> {
                   }),
                 )
               else
-                Positioned.fill(
-                  child: _buildListView(),
-                ),
+                Positioned.fill(child: _buildListView()),
 
-              // Search + filter bar
+              // Top bar: tabs + search (+ month chip on Races)
               Positioned(
                 top: MediaQuery.of(context).padding.top + 8,
                 left: 12,
                 right: 12,
                 child: Column(
                   children: [
-                    // Search bar
-                    Container(
-                      decoration: BoxDecoration(
-                        color: AppTheme.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.3),
-                            blurRadius: 8,
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        controller: _searchCtrl,
-                        onChanged: (v) {
-                          _searchQuery = v;
-                          _rebuildMarkers();
-                        },
-                        decoration: InputDecoration(
-                          hintText: 'Search races & parkruns...',
-                          prefixIcon: const Icon(Icons.search,
-                              color: AppTheme.textSecondary),
-                          suffixIcon: _searchQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear,
-                                      color: AppTheme.textSecondary),
-                                  onPressed: () {
-                                    _searchCtrl.clear();
-                                    _searchQuery = '';
-                                    _rebuildMarkers();
-                                  },
-                                )
-                              : null,
-                          border: InputBorder.none,
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                      ),
-                    ),
+                    _tabBar(),
                     const SizedBox(height: 8),
-                    // Filter chips — horizontally scrollable so they never
-                    // overflow or crowd the screen.
-                    Row(
-                      children: [
-                        _viewToggle(),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: [
-                                _filterChip('Both', _MapFilter.both),
-                                const SizedBox(width: 8),
-                                _filterChip('Parkruns', _MapFilter.parkruns),
-                                const SizedBox(width: 8),
-                                _filterChip('Races', _MapFilter.races),
-                                const SizedBox(width: 8),
-                                _monthChip(),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    _searchBar(isParkrunTab),
+                    if (!isParkrunTab) ...[
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: _monthChip(),
+                      ),
+                    ],
                   ],
                 ),
               ),
 
-              // Legend (map view only)
-              if (!_isListView)
+              // Floating actions (bottom-right)
+              if (!panelOpen)
                 Positioned(
-                  bottom: _selectedParkrun != null ||
-                          _selectedRace != null ||
-                          _selectedEvent != null
-                      ? 220
-                      : 88,
-                  right: 12,
+                  right: 14,
+                  bottom: 20,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      _legendBadge(Colors.green, 'Parkrun'),
-                      const SizedBox(height: 6),
-                      _legendBadge(Colors.orange, 'Race'),
+                      _viewToggleFab(),
+                      const SizedBox(height: 12),
+                      _addRaceFab(),
                     ],
                   ),
                 ),
 
-              // Selected parkrun panel
+              // Bottom panels
               if (_selectedParkrun != null)
                 Positioned(
                   bottom: 0,
@@ -616,13 +451,11 @@ class _MapScreenState extends State<MapScreen> {
                   right: 0,
                   child: _ParkrunPanel(
                     data: _selectedParkrun!,
-                    onClose: () =>
-                        setState(() => _selectedParkrun = null),
+                    onClose: () => setState(() => _selectedParkrun = null),
                     onAttend: () => _attendParkrun(_selectedParkrun!),
+                    onViewDetails: () => _openParkrunDetails(_selectedParkrun!),
                   ),
                 ),
-
-              // Selected findarace event panel
               if (_selectedEvent != null)
                 Positioned(
                   bottom: 0,
@@ -634,8 +467,6 @@ class _MapScreenState extends State<MapScreen> {
                     onAttend: () => _attendEvent(_selectedEvent!),
                   ),
                 ),
-
-              // Selected race panel
               if (_selectedRace != null)
                 Positioned(
                   bottom: 0,
@@ -661,48 +492,133 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  // ── Top-bar widgets ──────────────────────────────────────────────────────────
+
+  Widget _tabBar() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 6),
+        ],
+      ),
+      child: Row(
+        children: [
+          _tabButton('Parkruns', _Tab.parkruns),
+          _tabButton('Races', _Tab.races),
+        ],
+      ),
+    );
+  }
+
+  Widget _tabButton(String label, _Tab tab) {
+    final selected = _tab == tab;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _switchTab(tab),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? AppTheme.primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: selected ? Colors.white : AppTheme.textSecondary,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _searchBar(bool isParkrunTab) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8),
+        ],
+      ),
+      child: TextField(
+        controller: _searchCtrl,
+        onChanged: (v) {
+          _searchQuery = v;
+          _rebuildMarkers();
+        },
+        decoration: InputDecoration(
+          hintText:
+              isParkrunTab ? 'Search parkruns...' : 'Search races...',
+          prefixIcon:
+              const Icon(Icons.search, color: AppTheme.textSecondary),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, color: AppTheme.textSecondary),
+                  onPressed: () {
+                    _searchCtrl.clear();
+                    _searchQuery = '';
+                    _rebuildMarkers();
+                  },
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+        ),
+      ),
+    );
+  }
+
   Widget _monthChip() {
-    final active = _filterStart != null;
-    final label = active ? _filterLabel : 'Any date';
+    final active = _filterMonth != null;
     return GestureDetector(
-      onTap: _showDateFilter,
+      onTap: _showMonthFilter,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: active ? AppTheme.accent.withValues(alpha: 0.15) : AppTheme.surface,
+          color: active
+              ? AppTheme.accent.withValues(alpha: 0.15)
+              : AppTheme.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: active ? AppTheme.accent : AppTheme.divider.withValues(alpha: 0.8),
+            color: active
+                ? AppTheme.accent
+                : AppTheme.divider.withValues(alpha: 0.8),
           ),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 4),
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.25), blurRadius: 4),
           ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.calendar_today_outlined,
-                size: 12,
+                size: 13,
                 color: active ? AppTheme.accent : AppTheme.textSecondary),
-            const SizedBox(width: 5),
-            Text(label,
+            const SizedBox(width: 6),
+            Text(_monthLabel,
                 style: TextStyle(
                   color: active ? AppTheme.accent : AppTheme.textPrimary,
                   fontSize: 13,
                   fontWeight: active ? FontWeight.w600 : FontWeight.normal,
                 )),
             if (active) ...[
-              const SizedBox(width: 5),
+              const SizedBox(width: 6),
               GestureDetector(
                 onTap: () {
-                  setState(() { _filterStart = null; _filterEnd = null; });
+                  setState(() => _filterMonth = null);
                   _rebuildMarkers();
                 },
-                child: const Padding(
-                  padding: EdgeInsets.all(4),
-                  child: Icon(Icons.close,
-                      size: 14, color: AppTheme.textSecondary),
-                ),
+                child: const Icon(Icons.close,
+                    size: 15, color: AppTheme.textSecondary),
               ),
             ],
           ],
@@ -711,163 +627,138 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Widget _filterChip(String label, _MapFilter value) {
-    final selected = _filter == value;
-    return GestureDetector(
-      onTap: () {
-        setState(() => _filter = value);
-        _rebuildMarkers();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected ? AppTheme.primary : AppTheme.surface,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.25),
-              blurRadius: 4,
-            )
-          ],
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? Colors.white : AppTheme.textPrimary,
-            fontSize: 13,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _legendBadge(Color color, String label) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: AppTheme.surface.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2), blurRadius: 4)
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 10,
-              height: 10,
-              decoration:
-                  BoxDecoration(color: color, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 6),
-            Text(label,
-                style: const TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 12)),
-          ],
-        ),
-      );
-
-  Widget _viewToggle() {
+  Widget _viewToggleFab() {
     return GestureDetector(
       onTap: () => setState(() => _isListView = !_isListView),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(26),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.25), blurRadius: 6),
+                color: Colors.black.withValues(alpha: 0.4), blurRadius: 8),
           ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(_isListView ? Icons.map_outlined : Icons.format_list_bulleted,
-                size: 16, color: AppTheme.primary),
-            const SizedBox(width: 4),
+                size: 18, color: AppTheme.primary),
+            const SizedBox(width: 6),
             Text(_isListView ? 'Map' : 'List',
                 style: const TextStyle(
                     color: AppTheme.primary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600)),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700)),
           ],
         ),
       ),
     );
   }
 
+  Widget _addRaceFab() {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AddRaceScreen()),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppTheme.primary,
+          borderRadius: BorderRadius.circular(26),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.4), blurRadius: 8),
+          ],
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.add_location_alt_outlined, size: 18, color: Colors.white),
+            SizedBox(width: 6),
+            Text('Add race',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── List view ────────────────────────────────────────────────────────────────
+
   Widget _buildListView() {
     final entries = <_ListEntry>[];
 
-    // Parkruns happen every Saturday — use the next one for sorting.
-    final now = DateTime.now();
-    var nextSat = DateTime(now.year, now.month, now.day, 9);
-    while (nextSat.weekday != DateTime.saturday) {
-      nextSat = nextSat.add(const Duration(days: 1));
+    if (_tab == _Tab.parkruns) {
+      for (final p in _filteredParkruns()) {
+        entries.add(_ListEntry(
+          date: _nextSaturday(),
+          title: '${p['name']} parkrun',
+          subtitle: (p['location'] ?? '') as String,
+          dateLabel: 'Saturdays · 9:00am',
+          color: Colors.green,
+          onTap: () => setState(() {
+            _selectedParkrun = p;
+            _selectedEvent = null;
+            _selectedRace = null;
+          }),
+        ));
+      }
+      // Parkruns: alphabetical (they're all "every Saturday")
+      entries.sort((a, b) => a.title.compareTo(b.title));
+    } else {
+      for (final e in _filteredEvents()) {
+        final d = DateTime.parse(e['startDate']);
+        entries.add(_ListEntry(
+          date: d,
+          title: (e['name'] ?? '') as String,
+          subtitle: (e['city'] ?? '') as String,
+          dateLabel: DateFormat('EEE d MMM yyyy').format(d),
+          color: Colors.orange,
+          onTap: () => setState(() {
+            _selectedEvent = e;
+            _selectedParkrun = null;
+            _selectedRace = null;
+          }),
+        ));
+      }
+      for (final r in _filteredRaces()) {
+        entries.add(_ListEntry(
+          date: r.date,
+          title: r.name,
+          subtitle: r.location,
+          dateLabel: DateFormat('EEE d MMM yyyy').format(r.date),
+          color: Colors.orange,
+          onTap: () => setState(() {
+            _selectedRace = r;
+            _selectedParkrun = null;
+            _selectedEvent = null;
+          }),
+        ));
+      }
+      entries.sort((a, b) => a.date.compareTo(b.date));
     }
 
-    for (final p in _filteredParkruns()) {
-      entries.add(_ListEntry(
-        date: nextSat,
-        title: '${p['name']} parkrun',
-        subtitle: (p['location'] ?? '') as String,
-        dateLabel: 'Saturdays · 9:00am',
-        typeLabel: 'Parkrun',
-        color: Colors.green,
-        onTap: () => setState(() {
-          _selectedParkrun = p;
-          _selectedEvent = null;
-          _selectedRace = null;
-        }),
-      ));
-    }
-    for (final e in _filteredEvents()) {
-      final d = DateTime.parse(e['startDate']);
-      entries.add(_ListEntry(
-        date: d,
-        title: (e['name'] ?? '') as String,
-        subtitle: (e['city'] ?? '') as String,
-        dateLabel: DateFormat('EEE d MMM yyyy').format(d),
-        typeLabel: 'Race',
-        color: Colors.orange,
-        onTap: () => setState(() {
-          _selectedEvent = e;
-          _selectedParkrun = null;
-          _selectedRace = null;
-        }),
-      ));
-    }
-    for (final r in _filteredRaces()) {
-      entries.add(_ListEntry(
-        date: r.date,
-        title: r.name,
-        subtitle: r.location,
-        dateLabel: DateFormat('EEE d MMM yyyy').format(r.date),
-        typeLabel: r.type,
-        color: Colors.orange,
-        onTap: () => setState(() {
-          _selectedRace = r;
-          _selectedParkrun = null;
-          _selectedEvent = null;
-        }),
-      ));
-    }
-    entries.sort((a, b) => a.date.compareTo(b.date));
-
-    final topPad = MediaQuery.of(context).padding.top + 116;
+    // Leaves room for the tab bar + search (+ month chip on Races).
+    final topPad = MediaQuery.of(context).padding.top +
+        (_tab == _Tab.races ? 168 : 120);
 
     if (entries.isEmpty) {
       return Container(
         color: AppTheme.background,
         padding: EdgeInsets.fromLTRB(24, topPad, 24, 24),
         alignment: Alignment.topCenter,
-        child: const Text(
-          'No races or parkruns match your filters.\nTry a different date or search.',
+        child: Text(
+          _tab == _Tab.parkruns
+              ? 'No parkruns match your search.'
+              : 'No races match your search or month.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppTheme.textSecondary),
+          style: const TextStyle(color: AppTheme.textSecondary),
         ),
       );
     }
@@ -875,7 +766,7 @@ class _MapScreenState extends State<MapScreen> {
     return Container(
       color: AppTheme.background,
       child: ListView.separated(
-        padding: EdgeInsets.fromLTRB(12, topPad, 12, 24),
+        padding: EdgeInsets.fromLTRB(12, topPad, 12, 100),
         itemCount: entries.length,
         separatorBuilder: (_, __) => const SizedBox(height: 8),
         itemBuilder: (_, i) => _listTile(entries[i]),
@@ -927,13 +818,12 @@ class _MapScreenState extends State<MapScreen> {
   }
 }
 
-/// One row in the map's list view.
+/// One row in the list view.
 class _ListEntry {
   final DateTime date;
   final String title;
   final String subtitle;
   final String dateLabel;
-  final String typeLabel;
   final Color color;
   final VoidCallback onTap;
 
@@ -942,7 +832,6 @@ class _ListEntry {
     required this.title,
     required this.subtitle,
     required this.dateLabel,
-    required this.typeLabel,
     required this.color,
     required this.onTap,
   });
@@ -954,8 +843,13 @@ class _ParkrunPanel extends StatelessWidget {
   final Map<String, dynamic> data;
   final VoidCallback onClose;
   final VoidCallback onAttend;
-  const _ParkrunPanel(
-      {required this.data, required this.onClose, required this.onAttend});
+  final VoidCallback onViewDetails;
+  const _ParkrunPanel({
+    required this.data,
+    required this.onClose,
+    required this.onAttend,
+    required this.onViewDetails,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -981,8 +875,8 @@ class _ParkrunPanel extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.green.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                      color: Colors.green.withValues(alpha: 0.4)),
+                  border:
+                      Border.all(color: Colors.green.withValues(alpha: 0.4)),
                 ),
                 child: const Text('parkrun',
                     style: TextStyle(
@@ -1029,12 +923,26 @@ class _ParkrunPanel extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: onAttend,
-              child: const Text("I'm doing this"),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: onAttend,
+                  child: const Text("I'm doing this"),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onViewDetails,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.textPrimary,
+                    side: const BorderSide(color: AppTheme.divider),
+                  ),
+                  child: const Text('Reviews'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1229,8 +1137,7 @@ class _RacePanel extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 if (race.lightningBolt)
-                  const Text('⚡',
-                      style: TextStyle(fontSize: 16)),
+                  const Text('⚡', style: TextStyle(fontSize: 16)),
                 const Spacer(),
                 IconButton(
                     tooltip: 'Close',
