@@ -13,7 +13,7 @@ Also read: `BACKLOG.md` (outstanding work), `PROJECT_INSTRUCTIONS.md` (how to wo
 
 - GitHub: https://github.com/maldonadocintia-code/racepal (public)
 - Latest release: https://github.com/maldonadocintia-code/racepal/releases/latest
-- Current version: **v0.2.5-beta**
+- Current version: **v0.2.7-beta**
 - Firebase project: **racepal-ae334**
 
 ---
@@ -222,6 +222,9 @@ firebase deploy --only storage --project racepal-ae334
 
 # Check outdated packages
 flutter pub outdated
+
+# Publish a GitHub Release (gh CLI is installed & authenticated)
+gh release create v0.2.x-beta "build\app\outputs\flutter-apk\app-release.apk#RacePal-v0.2.x-beta.apk" --title "v0.2.x-beta" --notes "..."
 ```
 
 ---
@@ -229,7 +232,7 @@ flutter pub outdated
 ## Key Design Decisions / Gotchas
 
 - **Price field in JSON is a string** — `major_races_uk.json` uses `"From £60"` not a number. The `_EventPanel` on the map handles this: `price is num ? '£${price.toStringAsFixed(0)}' : price.toString()`
-- **No Play Store** — APK is sideloaded. Distributed via GitHub Releases.
+- **No Play Store** — APK is sideloaded. Distributed via GitHub Releases, published by Claude using the `gh` CLI (installed & authenticated as `maldonadocintia-code`) — **not manual upload**. `gh release create v<ver> <apk>#<nice-name>.apk --notes ...`
 - **Maps billing** — ~$0.007 per map load. $200/month free tier (recurring, separate from $300 trial credit). List view loads zero tiles. Budget alert: Google Cloud Console → Billing → Budgets & alerts.
 - **`ensureRace()`** — Creates a Firestore race doc on demand with a deterministic ID when a user taps "I'm doing this" on a parkrun/event. Prevents duplicates.
 - **Pals = mutual follows** — implemented as set intersection in `followService.getPals()`. Not stored as a separate collection.
