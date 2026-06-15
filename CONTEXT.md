@@ -64,8 +64,9 @@ Shell/nav: `lib/screens/home_shell.dart`
 ### Screens
 | File | Purpose |
 |---|---|
-| `lib/screens/map_screen.dart` | Hero screen. Map + list view, filter chips (scrollable), parkrun/event/race markers, FAB for Add Race, parkrun date picker (next 16 Saturdays) |
-| `lib/screens/race_detail_screen.dart` | Race detail — attendance buttons (Going / Attended / Not going / Review), reviews list |
+| `lib/screens/map_screen.dart` | Hero discovery screen. **Two tabs (Parkruns / Races) + search** (v0.2.7 simplification). List view is the default; Map is a toggle. Month filter on Races tab only. No more distance/type chips. Parkrun panel → "I'm doing this" (Saturday picker) + "Reviews" (venue detail) |
+| `lib/screens/race_detail_screen.dart` | Race detail — attendance buttons (Going / Attended / Not going / Review), reviews list. **Parkruns** use a venue doc `pr_<id>`: row shows "Plan a date" (Saturday picker) + "Review"; per-date attendee/pals sections hidden |
+| `lib/widgets/parkrun_helpers.dart` | Shared parkrun Saturday-picker + `planParkrunDate()` (used by map + race detail) |
 | `lib/screens/add_race_screen.dart` | Community-add a race (Firestore write) |
 | `lib/screens/calendar_screen.dart` | Month calendar + list. Toggles between My races and Pals races |
 | `lib/screens/feed_screen.dart` | Activity feed from followingUids |
@@ -168,20 +169,26 @@ match /profile_photos/{userId}.jpg {
 
 ---
 
-## Current Release State (v0.2.6-beta)
+## Current Release State (v0.2.7-beta)
+
+### New in v0.2.7-beta
+- **Simplified discovery screen** — Parkruns / Races tabs + search; distance/type chips and legend removed; list view default; month filter on Races tab only
+- **Parkrun ratings & reviews** — via a stable venue doc `pr_<id>` so reviews aggregate (don't fragment across Saturdays); Saturday planner preserved
+- **Follow fixed** — the "Could not update" batch-permission bug (rules now allow follower/following count writes on the other user's doc)
+- **In-app follow requests** — Feed bell shows a badge + Accept/Reject sheet (no push notifications, no cost)
+- **Perf** — map races stream created once, not on every rebuild
 
 ### What's working
-- Map view + list view toggle (list view avoids Google Maps tile charges)
+- Discovery: Parkruns / Races tabs + search, list (default) ↔ map toggle (list avoids Maps tile charges)
 - Parkrun markers (884), findarace events, major UK races
-- Date/month filter on map (future months work — all data loaded, filtered client-side)
-- Scrollable filter chips, FAB for Add Race
+- Month filter on Races tab (all data loaded, filtered client-side)
 - Parkrun "I'm doing this" — date picker for any of next 16 Saturdays
+- Parkrun reviews/ratings on the venue page
 - Attendance: Going / Attended / Not going (any race, any time)
 - Profile photo upload (camera or gallery) → Firebase Storage ✅ live
 - Profile edit (name, bio, photo)
 - Reviews with star rating + recommend flag + lightning bolt badge
-- Follow / unfollow / follow-back in Pals
-- Followers tab with follow-back button
+- Follow / unfollow / follow-back in Pals; follow requests via Feed bell
 - Google Sign-In
 - Feed screen (activity from followed users)
 - Calendar with Pals toggle + month picker
