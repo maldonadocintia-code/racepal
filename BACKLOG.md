@@ -4,6 +4,14 @@ Effort: **S** = a few hours · **M** = a day or two · **L** = multiple sessions
 
 ---
 
+## Bugs
+
+| # | Item | Notes | Effort | Status |
+|---|---|---|---|---|
+| B1 | Can't reach map / view toggle not visible | Map/List toggle now an explicit button in the Discover header. | S | ✅ Resolved (v0.2.8) |
+
+---
+
 ## Priority 1 — Complete the core concept
 
 | # | Item | Notes | Effort | Status |
@@ -12,6 +20,8 @@ Effort: **S** = a few hours · **M** = a day or two · **L** = multiple sessions
 | 2 | Show pals on race detail | Core to the concept — show which pals have done this race | M | ✅ Done |
 | 3 | Distance filter on search | Runners think in distances (5K, 10K, half, marathon) — needed for discovery. NOTE: unreliable name-matching distance chips were **removed** in the discovery-screen simplification (option C). A proper distance filter (using real distance data) is still wanted later. | M | 📋 Not started |
 | 6 | Parkrun ratings & reviews | Reviews aggregate on a stable venue doc `pr_{id}`; per-Saturday attendance kept for the calendar. | M | ✅ Done (v0.2.7) |
+| 10 | Region/radius search ("near Manchester within 10 mi") | Done: typed location (assets/uk_places.json gazetteer) + radius slider, results sorted by distance. Supersedes #3. Follow-up: expand the towns list as needed. | M | ✅ Done (v0.2.8) |
+| 11 | Add Run North West Races data | Add Run North West (NW England race organiser) events to the dataset — needs name, date, location, coords per event. Data-sourcing task. | M | 📋 Not started |
 
 ## Priority 2 — Polish
 
@@ -80,3 +90,7 @@ Effort: **S** = a few hours · **M** = a day or two · **L** = multiple sessions
 | Follow bug fix ("Could not update" — rules) | v0.2.7 |
 | In-app follow requests (Feed bell, Accept/Reject) | v0.2.7 |
 | Map data stream created once (perf) | v0.2.7 |
+| Discover: location + radius search (distance-sorted, addresses) | v0.2.8 |
+| Calendar colour-coding (mine purple / pals teal + avatars, no tabs) | v0.2.8 |
+| Profile: tappable Races/Reviews/Pals counts | v0.2.8 |
+| Map/List toggle made explicit (B1) | v0.2.8 |

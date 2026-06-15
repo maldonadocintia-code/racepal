@@ -13,7 +13,7 @@ Also read: `BACKLOG.md` (outstanding work), `PROJECT_INSTRUCTIONS.md` (how to wo
 
 - GitHub: https://github.com/maldonadocintia-code/racepal (public)
 - Latest release: https://github.com/maldonadocintia-code/racepal/releases/latest
-- Current version: **v0.2.7-beta**
+- Current version: **v0.2.9-beta**
 - Firebase project: **racepal-ae334**
 
 ---
@@ -64,13 +64,13 @@ Shell/nav: `lib/screens/home_shell.dart`
 ### Screens
 | File | Purpose |
 |---|---|
-| `lib/screens/map_screen.dart` | Hero discovery screen. **Two tabs (Parkruns / Races) + search** (v0.2.7 simplification). List view is the default; Map is a toggle. Month filter on Races tab only. No more distance/type chips. Parkrun panel → "I'm doing this" (Saturday picker) + "Reviews" (venue detail) |
+| `lib/screens/map_screen.dart` | Hero **Discover** screen (v0.2.8 redesign). **Location + radius search**: tap location bar → type a town (gazetteer type-ahead) → radius slider → results within radius **sorted by distance**, addresses shown. All/Parkruns/Races segment. List default; Map toggle shows a radius circle. Parkrun panel → "I'm doing this" (Saturday picker) + "Reviews" (venue detail). `_LocationPickerSheet`, `_Result` model inside. |
 | `lib/screens/race_detail_screen.dart` | Race detail — attendance buttons (Going / Attended / Not going / Review), reviews list. **Parkruns** use a venue doc `pr_<id>`: row shows "Plan a date" (Saturday picker) + "Review"; per-date attendee/pals sections hidden |
 | `lib/widgets/parkrun_helpers.dart` | Shared parkrun Saturday-picker + `planParkrunDate()` (used by map + race detail) |
 | `lib/screens/add_race_screen.dart` | Community-add a race (Firestore write) |
-| `lib/screens/calendar_screen.dart` | Month calendar + list. Toggles between My races and Pals races |
-| `lib/screens/feed_screen.dart` | Activity feed from followingUids |
-| `lib/screens/profile_screen.dart` | Profile view — photo, stats, tabs (Races / Reviews / Pals) |
+| `lib/screens/calendar_screen.dart` | Month + list calendar (v0.2.8). **No Me/Pals tabs** — mine (purple) and pals (teal) shown together; pals' races show **their avatars** (variant C). `_entriesLoader` builds combined `_Entry` list. |
+| `lib/screens/feed_screen.dart` | Activity feed from followingUids; appbar bell → pending follow-requests sheet (badge + Accept/Reject) |
+| `lib/screens/profile_screen.dart` | Profile — photo, bio. **Tappable stats: Races (completed, from attendances) / Pals / Reviews** → `_UserRacesScreen` / PalsScreen / `_UserReviewsScreen`. Recent activity list. |
 | `lib/screens/edit_profile_screen.dart` | Edit name/bio/photo. Camera or gallery pick → Firebase Storage upload |
 | `lib/screens/pals_screen.dart` | 3 tabs: Pals / Following / Followers. Search in appbar → FindPalsScreen |
 | `lib/screens/login_screen.dart` | Google Sign-In entry screen |
@@ -89,14 +89,16 @@ Shell/nav: `lib/screens/home_shell.dart`
 | `lib/services/race_service.dart` | `ensureRace()`, `setAttendance()`, `removeAttendance()`, `submitReview()`, `attendancesForUsers()`, `_recalcRaceStats()` |
 | `lib/services/follow_service.dart` | `followUser()`, `unfollowUser()`, `getPals()` (mutual follow), `searchUsers()`, `getFollowStatus()`, `followingUsers()`, `followerUsers()` |
 | `lib/services/auth_service.dart` | Google Sign-In, `updateProfile()` |
+| `lib/services/places_service.dart` | Loads `assets/uk_places.json`; `PlacesService.search()` type-ahead (place → coords) for Discover. Offline, free. |
 | `lib/services/google_calendar_service.dart` | Google Calendar integration (export) |
 
 ### Other
 | File | Purpose |
 |---|---|
 | `lib/main.dart` | App entry, Firebase init |
-| `lib/theme.dart` | `AppTheme` — colours, text styles |
+| `lib/theme.dart` | `AppTheme` — colours, text styles (note: Calendar pals colour `_palColor` teal `#22D3EE` is local to calendar_screen) |
 | `lib/widgets/shared_widgets.dart` | `UserAvatar`, `RaceCard`, shared UI components |
+| `lib/utils/geo.dart` | `milesBetween()` — haversine distance in miles for radius search |
 | `lib/firebase_options.dart` | Firebase config (auto-generated, committed) |
 
 ---
@@ -108,6 +110,7 @@ Shell/nav: `lib/screens/home_shell.dart`
 | `assets/parkruns_uk.json` | 884 UK parkruns — `id, name, location, lat, lng` |
 | `assets/findarace_uk.json` | ~1,190 UK races — `name, url, startDate, city, lat, lng, price, description` |
 | `assets/major_races_uk.json` | 55 major UK races 2026–2027 — `name, city, lat, lng, startDate, url, price` (price is a **string**, e.g. `"From £60"`, not a number) |
+| `assets/uk_places.json` | ~120 UK towns/cities — `name, lat, lng`. Gazetteer for Discover location search (place → coords). Starter set; expandable. |
 
 ### Map markers
 - Green = parkruns
@@ -169,14 +172,19 @@ match /profile_photos/{userId}.jpg {
 
 ---
 
-## Current Release State (v0.2.7-beta)
+## Current Release State (v0.2.9-beta)
 
-### New in v0.2.7-beta
-- **Simplified discovery screen** — Parkruns / Races tabs + search; distance/type chips and legend removed; list view default; month filter on Races tab only
-- **Parkrun ratings & reviews** — via a stable venue doc `pr_<id>` so reviews aggregate (don't fragment across Saturdays); Saturday planner preserved
-- **Follow fixed** — the "Could not update" batch-permission bug (rules now allow follower/following count writes on the other user's doc)
-- **In-app follow requests** — Feed bell shows a badge + Accept/Reject sheet (no push notifications, no cost)
-- **Perf** — map races stream created once, not on every rebuild
+### New in v0.2.9-beta
+- **Name search restored** — Discover has a "search by race/parkrun name" box again, alongside location+radius (a name query searches everything, ignoring radius).
+- **Pal search fixed** — `searchUsers` now matches first OR last name, case-insensitive (client-side `contains` over a 30s-cached user list; was a case-sensitive prefix-only query).
+
+### New in v0.2.8-beta
+- **Discover = location + radius search** — type a town (offline UK-towns gazetteer), set a radius slider, results **sorted by distance** (finds nearby towns name-search missed), addresses shown, radius circle on map. Replaces name-only search.
+- **Calendar colour-coded** — dropped Me/Pals tabs; mine (purple) + pals (teal) shown together; pals shown with **their avatars** (variant C). List + month views.
+- **Profile tappable counts** — Races (completed, derived from attendances) / Pals / Reviews open their lists. Dead `racesCount` field no longer used for the count.
+
+### Earlier — v0.2.7-beta
+- Parkrun ratings & reviews via stable venue doc `pr_<id>`; follow "Could not update" rules fix; in-app follow requests (Feed bell)
 
 ### What's working
 - Discovery: Parkruns / Races tabs + search, list (default) ↔ map toggle (list avoids Maps tile charges)

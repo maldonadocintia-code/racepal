@@ -5,6 +5,11 @@ import '../theme.dart';
 class FollowService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
+  // Small in-memory cache for user search (refreshed every 30s) so typing
+  // doesn't re-read all users on every keystroke.
+  List<AppUser>? _userCache;
+  DateTime? _userCacheAt;
+
   // ── Follow status ──────────────────────────────────────────────────────────
 
   Future<FollowStatus> getFollowStatus({
@@ -208,15 +213,28 @@ class FollowService {
     return results;
   }
 
+  /// Case-insensitive search that matches anywhere in the display name, so
+  /// first name, last name or a partial both work (e.g. "smith" finds
+  /// "John Smith"). Filters client-side over a cached user list.
+  ///
+  /// NOTE (scale): this loads up to 500 user docs. Fine for the beta's small
+  /// user base; before opening to the public, move to tokenised search.
   Future<List<AppUser>> searchUsers(String query) async {
-    if (query.isEmpty) return [];
-    final snap = await _db
-        .collection(AppConstants.usersCol)
-        .orderBy('displayName')
-        .startAt([query])
-        .endAt(['$query\uf8ff'])
-        .limit(15)
-        .get();
-    return snap.docs.map((d) => AppUser.fromDoc(d)).toList();
+    final q = query.trim().toLowerCase();
+    if (q.isEmpty) return [];
+
+    final fresh = _userCacheAt != null &&
+        DateTime.now().difference(_userCacheAt!) < const Duration(seconds: 30);
+    if (_userCache == null || !fresh) {
+      final snap =
+          await _db.collection(AppConstants.usersCol).limit(500).get();
+      _userCache = snap.docs.map((d) => AppUser.fromDoc(d)).toList();
+      _userCacheAt = DateTime.now();
+    }
+
+    return _userCache!
+        .where((u) => u.displayName.toLowerCase().contains(q))
+        .take(20)
+        .toList();
   }
 }
