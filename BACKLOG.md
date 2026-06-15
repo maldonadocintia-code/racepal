@@ -11,7 +11,7 @@ Effort: **S** = a few hours · **M** = a day or two · **L** = multiple sessions
 | 1 | Profile photo (unblock) | Enable Firebase Storage in console (2 clicks), then deploy rules. Code is ready. | S | ✅ Done |
 | 2 | Show pals on race detail | Core to the concept — show which pals have done this race | M | ✅ Done |
 | 3 | Distance filter on search | Runners think in distances (5K, 10K, half, marathon) — needed for discovery. NOTE: unreliable name-matching distance chips were **removed** in the discovery-screen simplification (option C). A proper distance filter (using real distance data) is still wanted later. | M | 📋 Not started |
-| 6 | Parkrun ratings & reviews | Parkruns must be reviewable/rateable like races. Gotcha: parkrun attendance is per-Saturday (`pr_{id}_{date}`), so reviews would fragment across dates. Plan: aggregate reviews on a stable venue-level doc `pr_{id}` while keeping per-Saturday attendance for the calendar. | M | 🔨 In progress |
+| 6 | Parkrun ratings & reviews | Reviews aggregate on a stable venue doc `pr_{id}`; per-Saturday attendance kept for the calendar. | M | ✅ Done (v0.2.7) |
 
 ## Priority 2 — Polish
 
@@ -21,6 +21,7 @@ Effort: **S** = a few hours · **M** = a day or two · **L** = multiple sessions
 | 5 | README update | Out of date — mentions screens and features that no longer exist | S | 📋 Not started |
 | 7 | Font size consistency | Text sizes are inconsistent across screens — needs a consistent type scale (e.g. defined sizes in `theme.dart` and applied everywhere). | S | 📋 Not started |
 | 8 | Follow-back on requests/new followers | When a new follower (or follow-requester) isn't followed back yet, show a "Follow back" action in the follow-requests sheet (Feed bell) — ideally Accept + follow-back in one tap to become Pals instantly. (Followers tab already has follow-back since v0.2.5.) | S | 📋 Not started |
+| 9 | Calendar/Profile load performance | Calendar re-fetches every race one-by-one on every redraw (slow + burns Firestore reads); Profile reloads Pals on every redraw. Cache lookups / create futures once. (Map stream fix already shipped v0.2.7.) | S | 📋 Not started |
 
 ---
 
@@ -72,3 +73,10 @@ Effort: **S** = a few hours · **M** = a day or two · **L** = multiple sessions
 | Follow button missing in search | v0.2.5 |
 | Follow-back from Followers tab | v0.2.5 |
 | Parkrun any-Saturday scheduling | v0.2.5 |
+| Show pals on race detail | v0.2.6 |
+| Profile photo upload | v0.2.6 |
+| Simplified discovery screen (Parkruns/Races tabs + search) | v0.2.7 |
+| Parkrun ratings & reviews (venue doc) | v0.2.7 |
+| Follow bug fix ("Could not update" — rules) | v0.2.7 |
+| In-app follow requests (Feed bell, Accept/Reject) | v0.2.7 |
+| Map data stream created once (perf) | v0.2.7 |
