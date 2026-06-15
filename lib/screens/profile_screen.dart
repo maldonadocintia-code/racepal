@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../services/app_provider.dart';
 import '../models/user_model.dart';
+import '../models/race_model.dart';
 import '../models/review_model.dart';
 import '../widgets/shared_widgets.dart';
 import '../theme.dart';
@@ -106,11 +108,32 @@ class _ProfileBody extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 16),
-                  // Stats row
+                  // Stats row — all three tappable
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _stat('Races', user.racesCount.toString()),
+                      // Races = events completed (attended), derived from attendances
+                      StreamBuilder<List<Attendance>>(
+                        stream:
+                            provider.raceService.userAttendances(user.uid),
+                        builder: (ctx, snap) {
+                          final done = (snap.data ?? [])
+                              .where((a) =>
+                                  a.status == AttendanceStatus.attended)
+                              .length;
+                          return GestureDetector(
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    _UserRacesScreen(uid: user.uid, isMe: isMe),
+                              ),
+                            ),
+                            child: _stat(
+                                'Races', snap.hasData ? done.toString() : '—'),
+                          );
+                        },
+                      ),
                       _statDivider(),
                       GestureDetector(
                         onTap: () => Navigator.push(
@@ -131,17 +154,19 @@ class _ProfileBody extends StatelessWidget {
                         ),
                       ),
                       _statDivider(),
-                      GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => PalsScreen(
-                              uid: user.uid,
-                              initialTab: 2,
+                      StreamBuilder<List<Review>>(
+                        stream: provider.raceService.userReviews(user.uid),
+                        builder: (ctx, snap) => GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  _UserReviewsScreen(uid: user.uid, isMe: isMe),
                             ),
                           ),
+                          child: _stat('Reviews',
+                              snap.hasData ? snap.data!.length.toString() : '—'),
                         ),
-                        child: _stat('Followers', user.followersCount.toString()),
                       ),
                     ],
                   ),
@@ -316,6 +341,204 @@ class _ActivityList extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// ── A user's races (Upcoming + Completed) ──────────────────────────────────
+
+class _RaceWithStatus {
+  final Race race;
+  final AttendanceStatus status;
+  _RaceWithStatus(this.race, this.status);
+}
+
+class _UserRacesScreen extends StatelessWidget {
+  final String uid;
+  final bool isMe;
+  const _UserRacesScreen({required this.uid, required this.isMe});
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.read<AppProvider>();
+    return Scaffold(
+      appBar: AppBar(title: Text(isMe ? 'My races' : 'Races')),
+      body: StreamBuilder<List<Attendance>>(
+        stream: provider.raceService.userAttendances(uid),
+        builder: (ctx, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final atts = snap.data ?? [];
+          if (atts.isEmpty) {
+            return const Center(
+              child: Text('No races yet.',
+                  style: TextStyle(color: AppTheme.textSecondary)),
+            );
+          }
+          return FutureBuilder<List<_RaceWithStatus>>(
+            future: Future.wait(atts.map((a) async {
+              final r = await provider.raceService.getRace(a.raceId);
+              return r == null ? null : _RaceWithStatus(r, a.status);
+            })).then((l) => l.whereType<_RaceWithStatus>().toList()),
+            builder: (ctx, snap2) {
+              if (!snap2.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final items = snap2.data!;
+              final upcoming = items.where((x) => x.race.isUpcoming).toList()
+                ..sort((a, b) => a.race.date.compareTo(b.race.date));
+              final past = items.where((x) => x.race.isPast).toList()
+                ..sort((a, b) => b.race.date.compareTo(a.race.date));
+              return ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  if (upcoming.isNotEmpty) ...[
+                    _header('Upcoming'),
+                    ...upcoming.map((x) => _raceRow(context, x.race)),
+                  ],
+                  if (past.isNotEmpty) ...[
+                    _header('Completed'),
+                    ...past.map((x) => _raceRow(context, x.race)),
+                  ],
+                ],
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _header(String t) => Padding(
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 6),
+        child: Text(t,
+            style: const TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.8)),
+      );
+
+  Widget _raceRow(BuildContext context, Race race) => GestureDetector(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) => RaceDetailScreen(raceId: race.id)),
+        ),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppTheme.divider),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(race.name,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 14)),
+                    const SizedBox(height: 2),
+                    Text(
+                        '${DateFormat('EEE d MMM yyyy').format(race.date)} · ${race.location}',
+                        style: const TextStyle(
+                            color: AppTheme.textSecondary, fontSize: 12),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+              ),
+              if (race.reviewCount > 0) ...[
+                const Icon(Icons.star, size: 13, color: AppTheme.accent),
+                const SizedBox(width: 2),
+                Text(race.averageRating.toStringAsFixed(1),
+                    style: const TextStyle(
+                        color: AppTheme.accent,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700)),
+              ],
+            ],
+          ),
+        ),
+      );
+}
+
+// ── A user's reviews ───────────────────────────────────────────────────────
+
+class _UserReviewsScreen extends StatelessWidget {
+  final String uid;
+  final bool isMe;
+  const _UserReviewsScreen({required this.uid, required this.isMe});
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.read<AppProvider>();
+    return Scaffold(
+      appBar: AppBar(title: Text(isMe ? 'My reviews' : 'Reviews')),
+      body: StreamBuilder<List<Review>>(
+        stream: provider.raceService.userReviews(uid),
+        builder: (ctx, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final reviews = snap.data ?? [];
+          if (reviews.isEmpty) {
+            return const Center(
+              child: Text('No reviews yet.',
+                  style: TextStyle(color: AppTheme.textSecondary)),
+            );
+          }
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: reviews.length,
+            itemBuilder: (ctx, i) {
+              final rv = reviews[i];
+              return GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => RaceDetailScreen(raceId: rv.raceId)),
+                ),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppTheme.divider),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      FutureBuilder<Race?>(
+                        future: provider.raceService.getRace(rv.raceId),
+                        builder: (ctx, rs) => Text(
+                          rs.data?.name ?? 'Race',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w700, fontSize: 15),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      LightningRating(rating: rv.rating, size: 16),
+                      if (rv.body != null && rv.body!.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(rv.body!,
+                            style: const TextStyle(
+                                color: AppTheme.textSecondary, fontSize: 13)),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }
