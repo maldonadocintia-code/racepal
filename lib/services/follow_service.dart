@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../theme.dart';
@@ -179,12 +180,23 @@ class FollowService {
             .toList(),
       );
 
+  // No orderBy here: that would need a (targetUid + createdAt) composite index,
+  // and without it the query fails and requests never show. Newest-first
+  // ordering is done client-side instead.
   Stream<List<Map<String, dynamic>>> pendingRequests(String targetUid) => _db
       .collection(AppConstants.followRequestsCol)
       .where('targetUid', isEqualTo: targetUid)
-      .orderBy('createdAt', descending: true)
       .snapshots()
-      .map((s) => s.docs.map((d) => d.data()).toList());
+      .map((s) {
+        final list = s.docs.map((d) => d.data()).toList();
+        list.sort((a, b) {
+          final ta = a['createdAt'];
+          final tb = b['createdAt'];
+          if (ta is Timestamp && tb is Timestamp) return tb.compareTo(ta);
+          return 0;
+        });
+        return list;
+      });
 
   Stream<List<AppUser>> followingUsers(String uid) =>
       followingUids(uid).asyncMap((uids) => _fetchUsers(uids));
@@ -197,6 +209,36 @@ class FollowService {
     final followers = await followerUids(uid).first;
     final palUids = following.toSet().intersection(followers.toSet()).toList();
     return _fetchUsers(palUids);
+  }
+
+  /// Reactive version of [getPals] — emits whenever following OR followers
+  /// change, so the Pals list updates live after a follow / follow-back.
+  Stream<List<AppUser>> palsStream(String uid) {
+    final controller = StreamController<List<AppUser>>();
+    List<String>? following;
+    List<String>? followers;
+
+    Future<void> recompute() async {
+      if (following == null || followers == null) return;
+      final palUids =
+          following!.toSet().intersection(followers!.toSet()).toList();
+      final users = await _fetchUsers(palUids);
+      if (!controller.isClosed) controller.add(users);
+    }
+
+    final s1 = followingUids(uid).listen((u) {
+      following = u;
+      recompute();
+    });
+    final s2 = followerUids(uid).listen((u) {
+      followers = u;
+      recompute();
+    });
+    controller.onCancel = () {
+      s1.cancel();
+      s2.cancel();
+    };
+    return controller.stream;
   }
 
   Future<List<AppUser>> _fetchUsers(List<String> uids) async {

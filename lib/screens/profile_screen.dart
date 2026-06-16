@@ -142,11 +142,11 @@ class _ProfileBody extends StatelessWidget {
                             builder: (_) => PalsScreen(uid: user.uid),
                           ),
                         ),
-                        child: FutureBuilder<List<AppUser>>(
-                          future: context
+                        child: StreamBuilder<List<AppUser>>(
+                          stream: context
                               .read<AppProvider>()
                               .followService
-                              .getPals(user.uid),
+                              .palsStream(user.uid),
                           builder: (ctx, snap) => _stat(
                             'Pals',
                             snap.hasData ? snap.data!.length.toString() : '—',

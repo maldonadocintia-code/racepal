@@ -13,7 +13,7 @@ Also read: `BACKLOG.md` (outstanding work), `PROJECT_INSTRUCTIONS.md` (how to wo
 
 - GitHub: https://github.com/maldonadocintia-code/racepal (public)
 - Latest release: https://github.com/maldonadocintia-code/racepal/releases/latest
-- Current version: **v0.2.9-beta**
+- Current version: **v0.2.10-beta**
 - Firebase project: **racepal-ae334**
 
 ---
@@ -87,7 +87,7 @@ Shell/nav: `lib/screens/home_shell.dart`
 |---|---|
 | `lib/services/app_provider.dart` | Central state — auth, `currentUser`, `followingUids`, `setAttendance`, `submitReview`, `toggleFollow`, `uploadProfilePhoto` |
 | `lib/services/race_service.dart` | `ensureRace()`, `setAttendance()`, `removeAttendance()`, `submitReview()`, `attendancesForUsers()`, `_recalcRaceStats()` |
-| `lib/services/follow_service.dart` | `followUser()`, `unfollowUser()`, `getPals()` (mutual follow), `searchUsers()`, `getFollowStatus()`, `followingUsers()`, `followerUsers()` |
+| `lib/services/follow_service.dart` | `follow()`, `unfollow()`, `getPals()` + **`palsStream()`** (reactive mutual-follow), **`searchUsers()`** (client-side case-insensitive `contains`, 30s cache), `pendingRequests()` (no orderBy — sorts client-side), `acceptRequest()`/`rejectRequest()`, `getFollowStatus()`, `followingUsers()`, `followerUsers()` |
 | `lib/services/auth_service.dart` | Google Sign-In, `updateProfile()` |
 | `lib/services/places_service.dart` | Loads `assets/uk_places.json`; `PlacesService.search()` type-ahead (place → coords) for Discover. Offline, free. |
 | `lib/services/google_calendar_service.dart` | Google Calendar integration (export) |
@@ -172,7 +172,11 @@ match /profile_photos/{userId}.jpg {
 
 ---
 
-## Current Release State (v0.2.9-beta)
+## Current Release State (v0.2.10-beta)
+
+### New in v0.2.10-beta
+- **Follow requests visible again** — `pendingRequests` dropped the `.orderBy('createdAt')` that needed a missing `(targetUid+createdAt)` composite index (it sorts client-side now). Requests show in the **Feed bell** (top-right), not on the profile.
+- **Pals list reactive** — new `FollowService.palsStream(uid)` (combines following + followers streams via a StreamController) replaces the one-shot `getPals` future in the Pals tab + profile count, so it updates live after a follow / follow-back.
 
 ### New in v0.2.9-beta
 - **Name search restored** — Discover has a "search by race/parkrun name" box again, alongside location+radius (a name query searches everything, ignoring radius).

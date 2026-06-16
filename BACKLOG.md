@@ -94,3 +94,7 @@ Effort: **S** = a few hours · **M** = a day or two · **L** = multiple sessions
 | Calendar colour-coding (mine purple / pals teal + avatars, no tabs) | v0.2.8 |
 | Profile: tappable Races/Reviews/Pals counts | v0.2.8 |
 | Map/List toggle made explicit (B1) | v0.2.8 |
+| Race-name search restored on Discover | v0.2.9 |
+| Pal search by first/last name (case-insensitive) | v0.2.9 |
+| Follow requests visible (dropped index-requiring orderBy) | v0.2.10 |
+| Pals list reactive (palsStream) | v0.2.10 |

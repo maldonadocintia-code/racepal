@@ -68,9 +68,9 @@ class _PalsScreenState extends State<PalsScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          // Pals — mutual follows
-          FutureBuilder<List<AppUser>>(
-            future: followService.getPals(widget.uid),
+          // Pals — mutual follows (reactive, updates after follow-backs)
+          StreamBuilder<List<AppUser>>(
+            stream: followService.palsStream(widget.uid),
             builder: (ctx, snap) {
               if (snap.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
