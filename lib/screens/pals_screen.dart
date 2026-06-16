@@ -78,6 +78,7 @@ class _PalsScreenState extends State<PalsScreen>
               return _UserList(
                 users: snap.data ?? [],
                 emptyMessage: 'No pals yet.\nWhen someone follows you back, they\'ll appear here.',
+                showFollowButton: true,
               );
             },
           ),
@@ -92,6 +93,7 @@ class _PalsScreenState extends State<PalsScreen>
               return _UserList(
                 users: snap.data ?? [],
                 emptyMessage: 'Not following anyone yet.\nFind runners in Discover!',
+                showFollowButton: true,
               );
             },
           ),
@@ -335,8 +337,8 @@ class _FoundUserTileState extends State<_FoundUserTile> {
 class _UserList extends StatelessWidget {
   final List<AppUser> users;
   final String emptyMessage;
-  // When true, each row shows a Follow / Following button (used on the
-  // Followers tab so you can follow back and become pals).
+  // When true, each row shows a Follow / Following button: on the Followers
+  // tab to follow back, and on the Following / Pals tabs to unfollow.
   final bool showFollowButton;
 
   const _UserList({

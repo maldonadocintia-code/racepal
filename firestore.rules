@@ -12,7 +12,11 @@ service cloud.firestore {
     }
 
     function isPublicUser(uid) {
-      return get(/databases/$(database)/documents/users/$(uid)).data.isPublic == true;
+      // Treat a missing `isPublic` field as public, matching the app (which
+      // defaults missing -> true) and the signup default. Without the default,
+      // legacy accounts created before the field existed would be locked as
+      // private here while the app shows them as public.
+      return get(/databases/$(database)/documents/users/$(uid)).data.get('isPublic', true) == true;
     }
 
     function isFollowing(targetUid) {
@@ -75,11 +79,18 @@ service cloud.firestore {
     // ── Follows ───────────────────────────────────────────────────────────────
     match /follows/{docId} {
       allow read: if isSignedIn();
-      // The follower creates a direct follow; the target creates the follow
-      // when accepting a request (acceptRequest writes on their behalf).
+      // Privacy is enforced HERE, not just on the client:
+      //  - The follower may create a direct follow ONLY if the target is
+      //    public. For a private target this rule denies the write, so the
+      //    client must go through follow_requests instead.
+      //  - The target may create the follow when accepting a request — but
+      //    only if a matching pending request actually exists, so they can't
+      //    fabricate followers / inflate someone's followingCount.
       allow create: if isSignedIn() && (
-        request.auth.uid == request.resource.data.followerUid ||
-        request.auth.uid == request.resource.data.followingUid
+        (request.auth.uid == request.resource.data.followerUid &&
+          isPublicUser(request.resource.data.followingUid)) ||
+        (request.auth.uid == request.resource.data.followingUid &&
+          exists(/databases/$(database)/documents/follow_requests/$(request.resource.data.followerUid + '_' + request.resource.data.followingUid)))
       );
       // Either side can delete: the follower unfollows, or the target removes
       // a follower.
