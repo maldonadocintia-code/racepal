@@ -13,6 +13,8 @@ Effort: **S** = a few hours · **M** = a day or two · **L** = multiple sessions
 | B3 | Accepting a pal request crashes | Batch-deleting a non-existent reverse request denied the whole batch (rule read null `resource.data`). | S | ✅ Resolved (v0.2.14) |
 | B4 | Race duplication on Explore | Skipped Firestore copies of bundled races (`createdBy == 'system'`). | S | ✅ Resolved (v0.2.15) |
 | B5 | Race info wrong / "made up" (bad addresses, websites) | Root cause: findarace data had mislabelled city/address fields. Replaced bundled data with a curated, verified Manchester set. | M | ✅ Resolved (v0.2.15) |
+| B6 | Ratings not showing next to curated races/parkruns in Explore | Asset rows hard-coded `rating: null`; the matching Firestore stats doc (deterministic id `fa_<slug>` / `pr_<id>`) was skipped. Now Explore looks up stats by id and shows the rating; also fixed the stream guard that only refreshed `_races` on a count change. **Caveat:** `upcomingRaces()` still loads ≤30 races (SC1), so ratings won't show for races beyond that until search is paginated. | S | ✅ Resolved |
+| B7 | Post review slow + button hidden behind keyboard | Stats recalc + feed write now run in the background (sheet closes promptly); review sheet is scrollable so Post sits above the keyboard. | S | ✅ Resolved |
 
 ---
 

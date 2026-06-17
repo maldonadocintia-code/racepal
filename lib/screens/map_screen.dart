@@ -126,6 +126,17 @@ class _MapScreenState extends State<MapScreen> {
     final now = DateTime.now();
     final nextSat = _nextSaturday();
 
+    // Curated races and parkruns are drawn from the bundled assets, but their
+    // ratings live on a Firestore "stats" doc under a deterministic id (created
+    // the first time someone interacts with them). Index the loaded Firestore
+    // races by id so we can show those ratings next to the asset rows.
+    final raceById = {for (final r in _races) r.id: r};
+    String? ratingFor(String id) {
+      final r = raceById[id];
+      if (r == null || r.reviewCount <= 0) return null;
+      return '${r.averageRating.toStringAsFixed(1)} (${r.reviewCount})';
+    }
+
     // Explore filters by location + radius only. Finding a race you already
     // know by name lives on the Plan tab (tap a date to add it).
     bool keep(double? dist) {
@@ -152,7 +163,7 @@ class _MapScreenState extends State<MapScreen> {
           title: title,
           address: address,
           dateLabel: 'Saturdays · 9:00am',
-          rating: null,
+          rating: ratingFor('pr_${p['id']}'),
           onSelect: () => setState(() {
             _selectedParkrun = p;
             _selectedEvent = null;
@@ -173,6 +184,7 @@ class _MapScreenState extends State<MapScreen> {
         final title = (e['name'] ?? '') as String;
         final address = (e['address'] ?? e['city'] ?? '') as String;
         if (!keep(dist)) continue;
+        final url = e['url'] as String?;
         res.add(_Result(
           markerKey: 'fa_${e['url']}',
           lat: lat,
@@ -183,7 +195,7 @@ class _MapScreenState extends State<MapScreen> {
           title: title,
           address: address,
           dateLabel: DateFormat('EEE d MMM yyyy').format(d),
-          rating: null,
+          rating: url != null ? ratingFor('fa_${url.split('/').last}') : null,
           onSelect: () => setState(() {
             _selectedEvent = e;
             _selectedParkrun = null;
@@ -374,10 +386,13 @@ class _MapScreenState extends State<MapScreen> {
       stream: _racesStream,
       builder: (ctx, snap) {
         final newRaces = snap.data ?? [];
+        // Only the marker set needs a full rebuild when the race *count* changes;
+        // but always take the latest data so updated ratings/stats are reflected
+        // even when the count is unchanged.
         if (newRaces.length != _races.length) {
-          _races = newRaces;
           WidgetsBinding.instance.addPostFrameCallback((_) => _rebuild());
         }
+        _races = newRaces;
         final results = _buildResults();
         final panelOpen = _selectedParkrun != null ||
             _selectedEvent != null ||
