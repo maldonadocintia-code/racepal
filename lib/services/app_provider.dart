@@ -104,6 +104,17 @@ class AppProvider extends ChangeNotifier {
     await _authService.signOut();
   }
 
+  /// GDPR right to erasure. Re-authenticates (a fresh Google sign-in), then
+  /// permanently deletes all the user's data and their auth account. The
+  /// auth-state listener then fires null and the app returns to the login
+  /// screen. Throws if the user cancels the re-auth prompt.
+  Future<void> deleteAccount() async {
+    final uid = _currentUser?.uid;
+    if (uid == null) return;
+    await _authService.reauthenticateWithGoogle();
+    await _authService.deleteAccount(uid);
+  }
+
   Future<void> updateProfile({
     String? displayName,
     String? bio,

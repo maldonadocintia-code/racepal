@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/app_provider.dart';
 import '../models/user_model.dart';
 import '../models/race_model.dart';
@@ -162,10 +163,90 @@ class _ProfileBody extends StatelessWidget {
                 ],
               ),
             ),
+            if (isMe) _accountSection(context, provider),
           ],
         ),
       ),
     );
+  }
+
+  // Privacy policy link + account deletion (GDPR + Play Store requirement).
+  Widget _accountSection(BuildContext context, AppProvider provider) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+        child: Column(
+          children: [
+            const Divider(),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              icon: const Icon(Icons.privacy_tip_outlined,
+                  size: 18, color: AppTheme.textSecondary),
+              label: const Text('Privacy policy',
+                  style: TextStyle(color: AppTheme.textSecondary)),
+              onPressed: () => launchUrl(
+                Uri.parse(AppConstants.privacyPolicyUrl),
+                mode: LaunchMode.externalApplication,
+              ),
+            ),
+            TextButton.icon(
+              icon: const Icon(Icons.delete_forever_outlined,
+                  size: 18, color: Colors.redAccent),
+              label: const Text('Delete account',
+                  style: TextStyle(color: Colors.redAccent)),
+              onPressed: () => _confirmDeleteAccount(context, provider),
+            ),
+          ],
+        ),
+      );
+
+  Future<void> _confirmDeleteAccount(
+      BuildContext context, AppProvider provider) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: const Text('Delete your account?'),
+        content: const Text(
+          'This permanently deletes your profile, photo, reviews, race history, '
+          'pals and activity. This cannot be undone.\n\n'
+          'You\'ll be asked to sign in again to confirm it\'s you.',
+          style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !context.mounted) return;
+
+    // Block the UI while we re-auth + wipe data.
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+    try {
+      await provider.deleteAccount();
+      // Auth-state listener returns the app to the login screen on its own.
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // dismiss the progress spinner
+        final cancelled = e.toString().contains('cancelled');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(cancelled
+                ? 'Account deletion cancelled.'
+                : 'Could not delete account. Please try again.'),
+          ),
+        );
+      }
+    }
   }
 
   Widget _stat(String label, String value) => Column(

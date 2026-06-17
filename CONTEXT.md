@@ -178,6 +178,21 @@ follows/, follow_requests/          # LEGACY — read-only (migration source onl
 
 ---
 
+## GDPR & Play Store launch (in progress)
+
+Goal: ship to the **Play Store closed-testing** track for feedback. See **`PLAY_STORE_LAUNCH.md`** for the full step-by-step.
+
+**Done in code (this session, not yet released):**
+- **Account deletion** (GDPR erasure) — Me tab → *Delete account*. `AuthService.deleteAccount`/`reauthenticateWithGoogle`, orchestrated by `AppProvider.deleteAccount`. Re-auths via Google, then wipes reviews, attendances, activity, pals (both mirror docs), pal requests, profile photo, user doc, then the auth account. Uses **individual deletes** (not batches) to respect the batch-delete-of-missing-doc gotcha.
+- **Sign-up consent** — login screen shows a Privacy Policy notice/link (`flutter/gestures` `TapGestureRecognizer`); profile has Privacy Policy + Delete account links. Replaced the stale "No Play Store needed" line.
+- **Privacy policy** — `docs/privacy.html` (host on GitHub Pages from /docs). ⚠️ Has `[YOUR FULL NAME]` + `[YOUR CONTACT EMAIL]` placeholders to fill.
+- **Firebase Analytics dropped** — removed from `android/app/build.gradle.kts` (no analytics-consent burden). It was never in pubspec.
+- **Release signing** — `build.gradle.kts` now reads `android/key.properties` (gitignored) for a real release `signingConfig`, falling back to debug signing when absent. **Keystore not yet generated** — the user owns that (password = permanent). `AppConstants.privacyPolicyUrl` added.
+
+**Pending (user/console actions — see PLAY_STORE_LAUNCH.md):** generate keystore + `key.properties`; `flutter build appbundle`; enable GitHub Pages + fill policy placeholders; **deploy Firestore rules** (new `users` self-delete rule — production); create Play dev account ($25); upload `.aab`; Data Safety + content rating + listing.
+
+**Decisions:** closed testing (not full launch); full client-side deletion (no Cloud Function); Google-only sign-in for launch, email/password as a fast-follow; passkeys parked (needs a paid backend).
+
 ## Release history (recent)
 
 - **v0.2.15** — Curated Manchester race set (hid findarace/major); fixed Explore race duplication.

@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
@@ -60,6 +61,77 @@ class AuthService {
   Future<void> signOut() async {
     await _google.signOut();
     await _auth.signOut();
+  }
+
+  // ── Account deletion (GDPR right to erasure) ───────────────────────────────
+
+  /// Re-authenticates the current user with a fresh Google credential. Firebase
+  /// requires a recent login before sensitive actions like account deletion;
+  /// doing it unconditionally also gives a clear "are you sure" moment.
+  Future<void> reauthenticateWithGoogle() async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('Not signed in');
+    final googleUser = await _google.signIn();
+    if (googleUser == null) throw Exception('cancelled');
+    final googleAuth = await googleUser.authentication;
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+    await user.reauthenticateWithCredential(credential);
+  }
+
+  /// Permanently erases all of [uid]'s personal data, then deletes the auth
+  /// account itself. Call [reauthenticateWithGoogle] first. Data is removed
+  /// while still authenticated; the auth account goes last so the writes are
+  /// permitted. Races themselves are left intact (they're shared, not personal).
+  Future<void> deleteAccount(String uid) async {
+    await _deleteUserData(uid);
+    await _auth.currentUser?.delete();
+    await _google.signOut();
+  }
+
+  Future<void> _deleteUserData(String uid) async {
+    // Reviews, attendances and activity entries I authored.
+    await _deleteByQuery(
+        _db.collection(AppConstants.reviewsCol).where('userId', isEqualTo: uid));
+    await _deleteByQuery(_db
+        .collection(AppConstants.attendancesCol)
+        .where('userId', isEqualTo: uid));
+    await _deleteByQuery(_db
+        .collection(AppConstants.activitiesCol)
+        .where('userId', isEqualTo: uid));
+    // Pals — both mirrored docs of every friendship I'm in.
+    await _deleteByQuery(
+        _db.collection(AppConstants.palsCol).where('ownerUid', isEqualTo: uid));
+    await _deleteByQuery(
+        _db.collection(AppConstants.palsCol).where('otherUid', isEqualTo: uid));
+    // Pal requests I sent or received.
+    await _deleteByQuery(_db
+        .collection(AppConstants.palRequestsCol)
+        .where('fromUid', isEqualTo: uid));
+    await _deleteByQuery(_db
+        .collection(AppConstants.palRequestsCol)
+        .where('toUid', isEqualTo: uid));
+    // Profile photo (may not exist — ignore a missing-object error).
+    try {
+      await FirebaseStorage.instance
+          .ref()
+          .child('profile_photos/$uid.jpg')
+          .delete();
+    } catch (_) {}
+    // Finally the profile doc itself.
+    await _db.collection(AppConstants.usersCol).doc(uid).delete();
+  }
+
+  /// Deletes every doc a query matches, one at a time. Individual deletes (not a
+  /// batch) keep this robust: a single denied/missing doc can't fail the rest —
+  /// see the batch-delete-of-missing-doc gotcha.
+  Future<void> _deleteByQuery(Query query) async {
+    final snap = await query.get();
+    for (final doc in snap.docs) {
+      await doc.reference.delete();
+    }
   }
 
   Future<AppUser?> getUser(String uid) async {

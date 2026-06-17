@@ -44,7 +44,9 @@ Effort: **S** = a few hours · **M** = a day or two · **L** = multiple sessions
 
 | # | Item | Notes | Effort | Status |
 |---|---|---|---|---|
-| G1 | Account deletion | User must be able to delete their account and all their data (profile, reviews, attendances, follows, activity feed entries, profile photo). Required by GDPR before opening to the public. | M | 📋 Not started |
+| G1 | Account deletion | In-app **Delete account** (Me tab) — re-auths via Google then wipes profile, photo, reviews, attendances, pals (both mirror docs), pal requests, activity, then the auth account. Needs the new `users` delete rule **deployed** (see PLAY_STORE_LAUNCH.md step 4). | M | ✅ Done (code) — rule deploy pending |
+| G2 | Sign-up consent + privacy policy | Consent notice + Privacy Policy link on login; policy at `docs/privacy.html` (needs name/email filled + GitHub Pages enabled). Firebase Analytics dropped to avoid analytics consent. | S | ✅ Done (code) — host + fill placeholders pending |
+| G3 | Known limitation: stale race aggregates after deletion | Deleting a user's reviews/attendances leaves a race's `reviewCount`/`averageRating`/`attendeeCount` slightly stale (not recalculated). Acceptable for MVP; recalc on delete if it becomes visible. | S | 📋 Not started |
 
 ---
 

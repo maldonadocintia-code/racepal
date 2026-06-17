@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/app_provider.dart';
 import '../theme.dart';
 
@@ -123,13 +125,32 @@ class LoginScreen extends StatelessWidget {
                         ),
                 ),
               ),
-              const SizedBox(height: 24),
-              const Text(
-                'Free to use · No Play Store needed',
-                style: TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: 12,
+              const SizedBox(height: 20),
+              Text.rich(
+                TextSpan(
+                  text: 'By continuing you agree to our ',
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 12,
+                  ),
+                  children: [
+                    TextSpan(
+                      text: 'Privacy Policy',
+                      style: const TextStyle(
+                        color: AppTheme.accent,
+                        fontSize: 12,
+                        decoration: TextDecoration.underline,
+                      ),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () => launchUrl(
+                              Uri.parse(AppConstants.privacyPolicyUrl),
+                              mode: LaunchMode.externalApplication,
+                            ),
+                    ),
+                    const TextSpan(text: '.'),
+                  ],
                 ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
             ],

@@ -86,6 +86,10 @@ class AppConstants {
   static const String appName = 'RacePals';
   static const String appVersion = '1.0.0';
 
+  // Privacy policy — hosted free on GitHub Pages (docs/privacy.html on master).
+  static const String privacyPolicyUrl =
+      'https://maldonadocintia-code.github.io/racepal/privacy.html';
+
   // Firestore collections
   static const String usersCol = 'users';
   static const String racesCol = 'races';

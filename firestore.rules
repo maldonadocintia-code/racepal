@@ -25,7 +25,9 @@ service cloud.firestore {
       // denormalised follower counts on other users' docs, so no cross-user
       // writes are needed.
       allow update: if isOwner(uid);
-      allow delete: if false;
+      // Owner may delete their own profile (GDPR right to erasure / account
+      // deletion). The app wipes the user's other data first, then this doc.
+      allow delete: if isOwner(uid);
     }
 
     // ── Races ─────────────────────────────────────────────────────────────────

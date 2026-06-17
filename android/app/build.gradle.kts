@@ -14,6 +14,16 @@ val localProps = Properties().apply {
 }
 val mapsApiKey: String = localProps.getProperty("maps.apiKey") ?: ""
 
+// Release signing config — read from android/key.properties (gitignored). When
+// the file is absent (e.g. a fresh clone or CI), release builds fall back to the
+// debug key so the build still works; only a machine with key.properties + the
+// keystore can produce a Play-Store-signable build.
+val keystoreProps = Properties().apply {
+    val f = rootProject.file("key.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+val hasReleaseSigning = keystoreProps.getProperty("storeFile") != null
+
 android {
     namespace = "com.racepal.app"
     compileSdk = flutter.compileSdkVersion
@@ -33,9 +43,27 @@ android {
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            // Use the real release key when key.properties is present; otherwise
+            // fall back to debug signing (fine for local/sideloaded builds, but
+            // the Play Store rejects debug-signed uploads).
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }
@@ -45,6 +73,7 @@ flutter {
 }
 
 dependencies {
-    implementation(platform("com.google.firebase:firebase-bom:33.0.0"))
-    implementation("com.google.firebase:firebase-analytics")
+    // Firebase Analytics intentionally not included — dropped for GDPR simplicity
+    // (no analytics consent needed). The Firebase SDK is supplied by the
+    // FlutterFire plugins (firebase_core / auth / firestore / storage).
 }
