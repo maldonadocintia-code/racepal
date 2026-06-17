@@ -36,9 +36,19 @@ Effort: **S** = a few hours · **M** = a day or two · **L** = multiple sessions
 | 5 | README update | Out of date — mentions screens and features that no longer exist | S | 📋 Not started |
 | 7 | Font size consistency | Text sizes are inconsistent across screens — needs a consistent type scale (e.g. defined sizes in `theme.dart` and applied everywhere). | S | 📋 Not started |
 | 8 | Follow-back on requests/new followers | When a new follower (or follow-requester) isn't followed back yet, show a "Follow back" action in the follow-requests sheet (Feed bell) — ideally Accept + follow-back in one tap to become Pals instantly. (Followers tab already has follow-back since v0.2.5.) | S | 📋 Not started |
-| 9 | Calendar/Profile load performance | Calendar re-fetches every race one-by-one on every redraw (slow + burns Firestore reads); Profile reloads Pals on every redraw. Cache lookups / create futures once. (Map stream fix already shipped v0.2.7.) | S | 📋 Not started |
+| 9 | Calendar/Profile load performance | Calendar re-fetched every race one-by-one on every redraw (burned Firestore reads). **Fixed:** added a 2-min TTL race-doc cache in `RaceService.getRace` (busted on stat writes), and split `_MonthView` into a stateless loader + stateful `_MonthCalendar` so day-tap/month-change no longer re-runs the loader. Profile `getRace` calls now share the same cache. | S | ✅ Done (calendar; cost fix) |
 
 ---
+
+## Authentication
+
+| # | Item | Notes | Effort | Status |
+|---|---|---|---|---|
+| A1 | Email + password sign-up/sign-in | Let users join without a Google account. Firebase Auth `createUserWithEmailAndPassword` / `signInWithEmailAndPassword` (free). Needs: a sign-up form (email, password, display name), a sign-in form, and validation. Planned **fast-follow** after the closed-test launch. Deletion + consent already cover any provider. | M | 📋 Not started |
+| A2 | Password reset | "Forgot password?" → `sendPasswordResetEmail` (free, Firebase sends the email). Needed alongside A1. | S | 📋 Not started |
+| A3 | Email verification | Send a verification email on sign-up (`sendEmailVerification`); optionally gate some actions until verified. Reduces spam/fake accounts. | S | 📋 Not started |
+| A4 | Username (display handle) | Optional: a unique @username separate from display name (for search / sharing). Needs a uniqueness check (a `usernames/{handle}` reservation collection). Decide if it's worth it for MVP. | M | 📋 Not started |
+| A5 | Passkeys (parked) | Modern passwordless login. **Firebase Auth has no native passkey support** — needs Android Credential Manager wired to a custom backend (leaves the free tier). Revisit only if the app gains traction. | L | 🅿️ Parked |
 
 ## GDPR
 
@@ -65,6 +75,14 @@ Effort: **S** = a few hours · **M** = a day or two · **L** = multiple sessions
 | SC1 | Scalable search | `searchUsers` loads up to 500 user docs client-side; Plan's "add a race" search only sees the first 30 upcoming community races (`upcomingRaces` limit). Move both to tokenised/indexed search before opening to the public. | M | 📋 Not started |
 
 ---
+
+## Safety / Moderation — before public launch
+
+| # | Item | Notes | Effort | Status |
+|---|---|---|---|---|
+| M1 | Report content (reviews) | A social app with user-generated reviews needs a way to flag/report inappropriate content, and for you to remove it. Google Play expects UGC moderation before public launch. OK to skip for trusted closed testers. | M | 📋 Not started |
+| M2 | Block a user | Let a user block another so they can't pal-request or appear to them. Safeguarding basic for a stranger-connecting social app. Before public launch. | M | 📋 Not started |
+| M3 | Onboarding: data-visibility notice | Make clear at sign-up that display name, photo, public reviews and attended races are visible to other signed-in users. Sets expectations / GDPR transparency. | S | 📋 Not started |
 
 ## Privacy / Security
 

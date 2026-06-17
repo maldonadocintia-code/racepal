@@ -6,6 +6,17 @@ import '../theme.dart';
 class RaceService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
+  // Short-lived cache of race docs. The calendar (and profile lists) call
+  // getRace() for the same races repeatedly — on every redraw, day tap and
+  // month change — which previously re-read every race from Firestore each
+  // time and burned the free-tier read quota. The cache serves repeat lookups
+  // locally; a short TTL keeps it fresh, and writes that change a race bust its
+  // entry (see _invalidateRace). See BACKLOG #9.
+  final Map<String, _CachedRace> _raceCache = {};
+  static const Duration _raceCacheTtl = Duration(minutes: 2);
+
+  void _invalidateRace(String id) => _raceCache.remove(id);
+
   // ── Races ──────────────────────────────────────────────────────────────────
 
   Stream<List<Race>> upcomingRaces({String? type, int limit = 30}) {
@@ -33,9 +44,22 @@ class RaceService {
       .snapshots()
       .map((s) => s.docs.map((d) => Race.fromDoc(d)).toList());
 
-  Future<Race?> getRace(String id) async {
+  /// Fetches a race, serving a recent cached copy when possible to avoid
+  /// re-reading the same doc on every UI rebuild. Pass [forceRefresh] when you
+  /// need guaranteed-fresh data.
+  Future<Race?> getRace(String id, {bool forceRefresh = false}) async {
+    if (!forceRefresh) {
+      final cached = _raceCache[id];
+      if (cached != null &&
+          DateTime.now().difference(cached.at) < _raceCacheTtl) {
+        return cached.race;
+      }
+    }
     final doc = await _db.collection(AppConstants.racesCol).doc(id).get();
-    return doc.exists ? Race.fromDoc(doc) : null;
+    if (!doc.exists) return null;
+    final race = Race.fromDoc(doc);
+    _raceCache[id] = _CachedRace(race, DateTime.now());
+    return race;
   }
 
   Future<String> addRace(Race race) async {
@@ -58,6 +82,7 @@ class RaceService {
 
   Future<void> deleteRace(String raceId) async {
     await _db.collection(AppConstants.racesCol).doc(raceId).delete();
+    _invalidateRace(raceId);
   }
 
   Stream<List<Race>> searchRaces(String query) {
@@ -164,6 +189,9 @@ class RaceService {
       'recommendPercent': recommendPercent,
       'lightningBolt': bolt,
     });
+    // The race doc's stats just changed — drop any cached copy so the next read
+    // (e.g. the detail header) reflects the new rating/review count.
+    _invalidateRace(raceId);
   }
 
   Stream<List<Review>> raceReviews(String raceId, {bool publicOnly = false}) {
@@ -219,6 +247,7 @@ class RaceService {
       {'reviewCount': FieldValue.increment(-1)},
     );
     await batch.commit();
+    _invalidateRace(review.raceId);
   }
 
   // ── Activity feed ──────────────────────────────────────────────────────────
@@ -241,4 +270,11 @@ class RaceService {
         .snapshots()
         .map((s) => s.docs.map((d) => ActivityItem.fromDoc(d)).toList());
   }
+}
+
+/// A race doc cached with the time it was fetched (for TTL expiry).
+class _CachedRace {
+  final Race race;
+  final DateTime at;
+  _CachedRace(this.race, this.at);
 }

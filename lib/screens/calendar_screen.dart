@@ -365,23 +365,39 @@ class _ListView extends StatelessWidget {
 
 // ── Month view ───────────────────────────────────────────────────────────────
 
-class _MonthView extends StatefulWidget {
+/// Loads the calendar entries once, then hands them to [_MonthCalendar].
+/// Keeping the loader here (and selection state below) separate means tapping a
+/// day or changing month only rebuilds the calendar — it does NOT re-run the
+/// loader, so we don't re-read every race from Firestore on each tap. See
+/// BACKLOG #9.
+class _MonthView extends StatelessWidget {
   final String uid;
   final List<String> palUids;
   const _MonthView({required this.uid, required this.palUids});
 
   @override
-  State<_MonthView> createState() => _MonthViewState();
+  Widget build(BuildContext context) {
+    return _entriesLoader(
+        context, uid, palUids, (entries) => _MonthCalendar(entries: entries));
+  }
 }
 
-class _MonthViewState extends State<_MonthView> {
+class _MonthCalendar extends StatefulWidget {
+  final List<_Entry> entries;
+  const _MonthCalendar({required this.entries});
+
+  @override
+  State<_MonthCalendar> createState() => _MonthCalendarState();
+}
+
+class _MonthCalendarState extends State<_MonthCalendar> {
   DateTime _focusedDay = DateTime.now();
   DateTime _selectedDay = DateTime.now();
 
   @override
   Widget build(BuildContext context) {
-    return _entriesLoader(context, widget.uid, widget.palUids, (entries) {
-      final events = <DateTime, List<_Entry>>{};
+    final entries = widget.entries;
+    final events = <DateTime, List<_Entry>>{};
       for (final e in entries) {
         final day =
             DateTime(e.race.date.year, e.race.date.month, e.race.date.day);
@@ -462,7 +478,6 @@ class _MonthViewState extends State<_MonthView> {
           ),
         ],
       );
-    });
   }
 
   Widget _addButton(BuildContext context, DateTime date) => GestureDetector(
