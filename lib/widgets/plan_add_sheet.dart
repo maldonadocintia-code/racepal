@@ -89,9 +89,8 @@ class _PlanAddSheetState extends State<_PlanAddSheet> {
   Future<void> _load() async {
     final provider = context.read<AppProvider>();
     final parkrunRaw = await rootBundle.loadString('assets/parkruns_uk.json');
-    final findaraceRaw =
-        await rootBundle.loadString('assets/findarace_uk.json');
-    final majorRaw = await rootBundle.loadString('assets/major_races_uk.json');
+    final eventsRaw =
+        await rootBundle.loadString('assets/manchester_races.json');
 
     final parkruns = (jsonDecode(parkrunRaw) as List)
         .cast<Map<String, dynamic>>()
@@ -102,10 +101,8 @@ class _PlanAddSheetState extends State<_PlanAddSheet> {
               raw: p,
             ));
 
-    final eventsList = [
-      ...(jsonDecode(findaraceRaw) as List).cast<Map<String, dynamic>>(),
-      ...(jsonDecode(majorRaw) as List).cast<Map<String, dynamic>>(),
-    ];
+    final eventsList =
+        (jsonDecode(eventsRaw) as List).cast<Map<String, dynamic>>();
     final seen = <String>{};
     final events = <_Known>[];
     for (final e in eventsList) {

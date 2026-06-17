@@ -1,0 +1,222 @@
+[
+  {
+    "name": "Lyme Midsummer Trail 10K",
+    "url": "https://www.runnorthwest.co.uk/pages/lyme-midsummer-trail-10k-2026",
+    "startDate": "2026-06-23T19:00:00+01:00",
+    "description": "Run North West evening trail 10K through the grounds of Lyme Park.",
+    "city": "Disley",
+    "address": "Lyme Park, Disley, Stockport SK12",
+    "lat": 53.342,
+    "lng": -2.057,
+    "distance": "10K"
+  },
+  {
+    "name": "RunThrough Run Media City 5K & 10K",
+    "url": "https://www.runthrough.co.uk/venues/media-city-running-events",
+    "startDate": "2026-06-25T19:00:00+01:00",
+    "description": "Flat, fast 2.5km canal-side laps past MediaCityUK. 5K and 10K options.",
+    "city": "Salford",
+    "address": "MediaCityUK, Salford Quays, Salford M50",
+    "lat": 53.4727,
+    "lng": -2.2986,
+    "distance": "5K / 10K"
+  },
+  {
+    "name": "RunThrough Tatton Park 5K & 10K",
+    "url": "https://www.runthrough.co.uk/venues/tatton-park-running-events",
+    "startDate": "2026-07-01T19:30:00+01:00",
+    "description": "5K and 10K in the parkland of Tatton Park. Part of the monthly series.",
+    "city": "Knutsford",
+    "address": "Tatton Park, Knutsford WA16",
+    "lat": 53.33,
+    "lng": -2.39,
+    "distance": "5K / 10K"
+  },
+  {
+    "name": "Wilmslow Summer 10K",
+    "url": "https://www.runnorthwest.co.uk/pages/wilmslow-summer-10k-2026",
+    "startDate": "2026-07-12T09:30:00+01:00",
+    "description": "Run North West summer 10K on the roads around Wilmslow.",
+    "city": "Wilmslow",
+    "address": "Wilmslow, Cheshire SK9",
+    "lat": 53.3186,
+    "lng": -2.23,
+    "distance": "10K"
+  },
+  {
+    "name": "Alderley Park Trail 5 Mile",
+    "url": "https://www.runnorthwest.co.uk/pages/alderley-park-trail-5-mile-2026",
+    "startDate": "2026-07-21T19:00:00+01:00",
+    "description": "Run North West evening 5-mile trail race at Alderley Park.",
+    "city": "Nether Alderley",
+    "address": "Alderley Park, Nether Alderley, Macclesfield SK10",
+    "lat": 53.287,
+    "lng": -2.236,
+    "distance": "5 miles"
+  },
+  {
+    "name": "RunThrough Run Media City 5K & 10K",
+    "url": "https://www.runthrough.co.uk/venues/media-city-running-events",
+    "startDate": "2026-07-30T19:00:00+01:00",
+    "description": "Flat, fast 2.5km canal-side laps past MediaCityUK. 5K and 10K options.",
+    "city": "Salford",
+    "address": "MediaCityUK, Salford Quays, Salford M50",
+    "lat": 53.4727,
+    "lng": -2.2986,
+    "distance": "5K / 10K"
+  },
+  {
+    "name": "RunThrough Tatton Park 5K & 10K",
+    "url": "https://www.runthrough.co.uk/venues/tatton-park-running-events",
+    "startDate": "2026-08-08T09:00:00+01:00",
+    "description": "5K and 10K in the parkland of Tatton Park. Part of the monthly series.",
+    "city": "Knutsford",
+    "address": "Tatton Park, Knutsford WA16",
+    "lat": 53.33,
+    "lng": -2.39,
+    "distance": "5K / 10K"
+  },
+  {
+    "name": "RunThrough Tatton Park 5K & 10K",
+    "url": "https://www.runthrough.co.uk/venues/tatton-park-running-events",
+    "startDate": "2026-09-12T09:00:00+01:00",
+    "description": "5K and 10K in the parkland of Tatton Park. Part of the monthly series.",
+    "city": "Knutsford",
+    "address": "Tatton Park, Knutsford WA16",
+    "lat": 53.33,
+    "lng": -2.39,
+    "distance": "5K / 10K"
+  },
+  {
+    "name": "Barclays Knutsford 10K",
+    "url": "https://www.runnorthwest.co.uk/pages/barclays-knutsford-10k-2026",
+    "startDate": "2026-09-27T09:30:00+01:00",
+    "description": "Run North West 10K through the streets of Knutsford.",
+    "city": "Knutsford",
+    "address": "Knutsford, Cheshire WA16",
+    "lat": 53.303,
+    "lng": -2.373,
+    "distance": "10K"
+  },
+  {
+    "name": "Manchester Half Marathon",
+    "url": "https://www.timeto.com/en/event/manchester-half-marathon",
+    "startDate": "2026-10-04T09:00:00+01:00",
+    "description": "The region's biggest half marathon — a flat, fast 13.1 miles starting and finishing by Old Trafford.",
+    "city": "Manchester",
+    "address": "Old Trafford Cricket Ground, Manchester M16",
+    "lat": 53.4568,
+    "lng": -2.2876,
+    "distance": "Half Marathon"
+  },
+  {
+    "name": "RunThrough Tatton Park 5K & 10K",
+    "url": "https://www.runthrough.co.uk/venues/tatton-park-running-events",
+    "startDate": "2026-10-10T09:00:00+01:00",
+    "description": "5K and 10K in the parkland of Tatton Park. Part of the monthly series.",
+    "city": "Knutsford",
+    "address": "Tatton Park, Knutsford WA16",
+    "lat": 53.33,
+    "lng": -2.39,
+    "distance": "5K / 10K"
+  },
+  {
+    "name": "RunThrough Heaton Park 5K / 10K / Half",
+    "url": "https://www.runthrough.co.uk/venues/heaton-park-running-events",
+    "startDate": "2026-10-11T09:30:00+01:00",
+    "description": "5K, 10K and Half Marathon (plus a junior race) at Heaton Park, north Manchester.",
+    "city": "Manchester",
+    "address": "Heaton Park, Manchester M25",
+    "lat": 53.5283,
+    "lng": -2.253,
+    "distance": "5K / 10K / Half"
+  },
+  {
+    "name": "RunThrough Tatton Park 5K & 10K",
+    "url": "https://www.runthrough.co.uk/venues/tatton-park-running-events",
+    "startDate": "2026-11-07T09:00:00+00:00",
+    "description": "5K and 10K in the parkland of Tatton Park. Part of the monthly series.",
+    "city": "Knutsford",
+    "address": "Tatton Park, Knutsford WA16",
+    "lat": 53.33,
+    "lng": -2.39,
+    "distance": "5K / 10K"
+  },
+  {
+    "name": "Wilmslow Festive 10K",
+    "url": "https://www.runnorthwest.co.uk/pages/wilmslow-festive-10k-2026",
+    "startDate": "2026-11-22T09:30:00+00:00",
+    "description": "Run North West festive 10K around Wilmslow.",
+    "city": "Wilmslow",
+    "address": "Wilmslow, Cheshire SK9",
+    "lat": 53.3186,
+    "lng": -2.23,
+    "distance": "10K"
+  },
+  {
+    "name": "RunThrough Heaton Park 5K / 10K / Half",
+    "url": "https://www.runthrough.co.uk/venues/heaton-park-running-events",
+    "startDate": "2026-11-29T09:30:00+00:00",
+    "description": "5K, 10K and Half Marathon (plus a junior race) at Heaton Park, north Manchester.",
+    "city": "Manchester",
+    "address": "Heaton Park, Manchester M25",
+    "lat": 53.5283,
+    "lng": -2.253,
+    "distance": "5K / 10K / Half"
+  },
+  {
+    "name": "Tatton Yule Yomp 10K",
+    "url": "https://www.runnorthwest.co.uk/pages/tatton-yule-yomp-2026",
+    "startDate": "2026-12-06T09:30:00+00:00",
+    "description": "Run North West festive trail 10K at Tatton Park.",
+    "city": "Knutsford",
+    "address": "Tatton Park, Knutsford WA16",
+    "lat": 53.33,
+    "lng": -2.39,
+    "distance": "10K"
+  },
+  {
+    "name": "RunThrough Tatton Park 5K & 10K",
+    "url": "https://www.runthrough.co.uk/venues/tatton-park-running-events",
+    "startDate": "2026-12-12T09:00:00+00:00",
+    "description": "5K and 10K in the parkland of Tatton Park. Part of the monthly series.",
+    "city": "Knutsford",
+    "address": "Tatton Park, Knutsford WA16",
+    "lat": 53.33,
+    "lng": -2.39,
+    "distance": "5K / 10K"
+  },
+  {
+    "name": "Wilmslow Running Festival (Half & 10K)",
+    "url": "https://wilmslowrunningfestival.org.uk",
+    "startDate": "2027-03-21T09:30:00+00:00",
+    "description": "Half Marathon and 10K starting from Wilmslow RUFC — a fast, popular spring race.",
+    "city": "Wilmslow",
+    "address": "Wilmslow RUFC, Kings Road, Wilmslow SK9 5PZ",
+    "lat": 53.3186,
+    "lng": -2.23,
+    "distance": "Half / 10K"
+  },
+  {
+    "name": "adidas Manchester Marathon",
+    "url": "https://www.manchestermarathon.co.uk",
+    "startDate": "2027-04-18T09:00:00+01:00",
+    "description": "The UK's 2nd largest marathon — a flat, fast 26.2 miles around Trafford, finishing by Old Trafford.",
+    "city": "Manchester",
+    "address": "Trafford / Old Trafford, Manchester M16",
+    "lat": 53.4631,
+    "lng": -2.2913,
+    "distance": "Marathon"
+  },
+  {
+    "name": "AJ Bell Great Manchester Run (10K & Half)",
+    "url": "https://www.greatrun.org/events/great-manchester-run/",
+    "startDate": "2027-05-23T08:30:00+01:00",
+    "description": "Europe's largest 10K, plus a half marathon — starts on Portland Street and finishes on Deansgate.",
+    "city": "Manchester",
+    "address": "City centre (Portland Street), Manchester M1",
+    "lat": 53.4781,
+    "lng": -2.237,
+    "distance": "10K / Half"
+  }
+]

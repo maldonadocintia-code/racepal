@@ -74,14 +74,12 @@ class _MapScreenState extends State<MapScreen> {
 
   Future<void> _loadEvents() async {
     if (_eventsLoaded) return;
-    final rawFindarace = await rootBundle.loadString('assets/findarace_uk.json');
-    final rawMajor = await rootBundle.loadString('assets/major_races_uk.json');
-    final findaraceList =
-        (jsonDecode(rawFindarace) as List).cast<Map<String, dynamic>>();
-    final majorList =
-        (jsonDecode(rawMajor) as List).cast<Map<String, dynamic>>();
+    // Curated, verified Manchester-area race set (replaces the unreliable
+    // bundled findarace/major data — see assets/manchester_races.json).
+    final raw = await rootBundle.loadString('assets/manchester_races.json');
+    final list = (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
     final seen = <String>{};
-    _eventData = [...findaraceList, ...majorList].where((e) {
+    _eventData = list.where((e) {
       final key = '${e['name']}_${e['startDate']}';
       if (!seen.add(key)) return false;
       return DateTime.tryParse(e['startDate'] ?? '') != null;
@@ -194,7 +192,14 @@ class _MapScreenState extends State<MapScreen> {
         ));
       }
       for (final r in _races) {
-        if (r.isParkrun || r.lat == null || r.lng == null || !r.isUpcoming) {
+        // Skip system-created Firestore copies of bundled races — the asset
+        // catalogue is the single source for those, so they'd otherwise show
+        // twice. Only genuinely user-created races come from Firestore here.
+        if (r.isParkrun ||
+            r.createdBy == 'system' ||
+            r.lat == null ||
+            r.lng == null ||
+            !r.isUpcoming) {
           continue;
         }
         final dist = _distOf(r.lat, r.lng);

@@ -2,7 +2,7 @@ name: racepal
 description: UK Race & Parkrun social calendar
 
 publish_to: 'none'
-version: 0.2.14+15
+version: 0.2.15+16
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -49,6 +49,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/parkruns_uk.json
-    - assets/findarace_uk.json
-    - assets/major_races_uk.json
+    - assets/manchester_races.json
     - assets/uk_places.json
