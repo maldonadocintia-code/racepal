@@ -51,6 +51,31 @@ Effort: **S** = a few hours · **M** = a day or two · **L** = multiple sessions
 
 ---
 
+## Scale — before public launch
+
+| # | Item | Notes | Effort | Status |
+|---|---|---|---|---|
+| SC1 | Scalable search | `searchUsers` loads up to 500 user docs client-side; Plan's "add a race" search only sees the first 30 upcoming community races (`upcomingRaces` limit). Move both to tokenised/indexed search before opening to the public. | M | 📋 Not started |
+
+---
+
+## Privacy / Security
+
+| # | Item | Notes | Effort | Status |
+|---|---|---|---|---|
+| PR1 | Audit legacy bypassed follows | Before v0.2.11 the `follows` rules let anyone create a follow to a private account (privacy was client-side only; now enforced server-side). Audit and clean any direct follows of private accounts created under the old rules. | S | 📋 Not started |
+| PR2 | Unused `canViewUser` rule | `firestore.rules` defines `canViewUser()` but nothing references it — verify whether a collection should be gating reads to followers (possible privacy gap). | S | 📋 Not started |
+
+---
+
+## Chores
+
+| # | Item | Notes | Effort | Status |
+|---|---|---|---|---|
+| C1 | Delete Explore/Plan prototype | Remove throwaway `prototype/explore_plan_mockup.html` once the v0.2.12 Explore/Plan redesign is confirmed on-device. | S | 📋 Not started |
+
+---
+
 ## Parked — built but not exposed yet
 
 | Item | Notes |

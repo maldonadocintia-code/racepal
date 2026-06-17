@@ -488,11 +488,11 @@ class ActivityCard extends StatelessWidget {
 
 // ── Follow button ─────────────────────────────────────────────────────────
 
-class FollowButton extends StatelessWidget {
-  final FollowStatus status;
+class PalButton extends StatelessWidget {
+  final PalStatus status;
   final VoidCallback onPressed;
 
-  const FollowButton({
+  const PalButton({
     super.key,
     required this.status,
     required this.onPressed,
@@ -500,46 +500,41 @@ class FollowButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    switch (status) {
-      case FollowStatus.following:
-        return OutlinedButton(
+    OutlinedButton outlined(String label, {Color? fg}) => OutlinedButton(
           onPressed: onPressed,
           style: OutlinedButton.styleFrom(
-            foregroundColor: AppTheme.textPrimary,
+            foregroundColor: fg ?? AppTheme.textPrimary,
             side: const BorderSide(color: AppTheme.divider),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           ),
-          child: const Text('Following'),
+          child: Text(label),
         );
-      case FollowStatus.requested:
-        return OutlinedButton(
-          onPressed: onPressed,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppTheme.textSecondary,
-            side: const BorderSide(color: AppTheme.divider),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          ),
-          child: const Text('Requested'),
-        );
-      case FollowStatus.none:
-        return ElevatedButton(
+    ElevatedButton filled(String label, {Color? bg, Color? fg}) =>
+        ElevatedButton(
           onPressed: onPressed,
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.primary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
+            backgroundColor: bg ?? AppTheme.primary,
+            foregroundColor: fg ?? Colors.white,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           ),
-          child: const Text('Follow'),
+          child: Text(label),
         );
-      case FollowStatus.self:
+
+    switch (status) {
+      case PalStatus.pals:
+        return outlined('Pals ✓');
+      case PalStatus.requested:
+        return outlined('Requested', fg: AppTheme.textSecondary);
+      case PalStatus.incoming:
+        return filled('Accept pal',
+            bg: AppTheme.accent, fg: AppTheme.background);
+      case PalStatus.none:
+        return filled('Add pal');
+      case PalStatus.self:
         return const SizedBox.shrink();
     }
   }

@@ -72,13 +72,11 @@ class AuthService {
     required String uid,
     String? displayName,
     String? bio,
-    bool? isPublic,
     String? photoUrl,
   }) async {
     final updates = <String, dynamic>{};
     if (displayName != null) updates['displayName'] = displayName;
     if (bio != null) updates['bio'] = bio;
-    if (isPublic != null) updates['isPublic'] = isPublic;
     if (photoUrl != null) updates['photoUrl'] = photoUrl;
 
     await _db.collection(AppConstants.usersCol).doc(uid).update(updates);

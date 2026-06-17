@@ -14,17 +14,17 @@ class FeedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AppProvider>();
-    final followingUids = provider.followingUids;
+    final palUids = provider.palUids;
     final myUid = provider.currentUser!.uid;
 
     // Include self in feed
-    final feedUids = [...followingUids, myUid];
+    final feedUids = [...palUids, myUid];
 
     return Scaffold(
       appBar: AppBar(
         actions: [
           StreamBuilder<List<Map<String, dynamic>>>(
-            stream: provider.followService.pendingRequests(myUid),
+            stream: provider.palService.incomingRequests(myUid),
             builder: (context, snap) {
               final count = snap.data?.length ?? 0;
               return Stack(
@@ -32,7 +32,7 @@ class FeedScreen extends StatelessWidget {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.notifications_outlined),
-                    tooltip: 'Follow requests',
+                    tooltip: 'Pal requests',
                     onPressed: () => _showRequests(context, myUid),
                   ),
                   if (count > 0)
@@ -120,14 +120,9 @@ class FeedScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Follow other runners to see their races, parkruns and reviews here.',
+              'Add pals to see their races, parkruns and reviews here.',
               style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
               textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {},
-              child: const Text('Find runners to follow'),
             ),
           ],
         ),
@@ -143,16 +138,16 @@ class FeedScreen extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => _FollowRequestsSheet(myUid: myUid),
+      builder: (_) => _PalRequestsSheet(myUid: myUid),
     );
   }
 }
 
-// ── Follow requests sheet ──────────────────────────────────────────────────
+// ── Pal requests sheet ──────────────────────────────────────────────────────
 
-class _FollowRequestsSheet extends StatelessWidget {
+class _PalRequestsSheet extends StatelessWidget {
   final String myUid;
-  const _FollowRequestsSheet({required this.myUid});
+  const _PalRequestsSheet({required this.myUid});
 
   @override
   Widget build(BuildContext context) {
@@ -176,19 +171,19 @@ class _FollowRequestsSheet extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Follow requests',
+              'Pal requests',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 16),
             StreamBuilder<List<Map<String, dynamic>>>(
-              stream: provider.followService.pendingRequests(myUid),
+              stream: provider.palService.incomingRequests(myUid),
               builder: (context, snap) {
                 final requests = snap.data ?? [];
                 if (requests.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 24),
                     child: Center(
-                      child: Text('No follow requests',
+                      child: Text('No pal requests',
                           style: TextStyle(color: AppTheme.textSecondary)),
                     ),
                   );
@@ -197,7 +192,7 @@ class _FollowRequestsSheet extends StatelessWidget {
                   shrinkWrap: true,
                   itemCount: requests.length,
                   itemBuilder: (_, i) => _RequestTile(
-                    requesterUid: requests[i]['requesterUid'] as String,
+                    requesterUid: requests[i]['fromUid'] as String,
                     targetUid: myUid,
                   ),
                 );
@@ -245,13 +240,13 @@ class _RequestTile extends StatelessWidget {
                 onPressed: () async {
                   final messenger = ScaffoldMessenger.of(context);
                   try {
-                    await provider.followService.acceptRequest(
+                    await provider.palService.acceptRequest(
                       requesterUid: requesterUid,
-                      targetUid: targetUid,
+                      myUid: targetUid,
                     );
                     messenger.showSnackBar(SnackBar(
-                        content:
-                            Text('${user?.displayName ?? 'Runner'} is now following you')));
+                        content: Text(
+                            "You're now pals with ${user?.displayName ?? 'this runner'} 🎉")));
                   } catch (_) {
                     messenger.showSnackBar(const SnackBar(
                         content: Text('Could not accept. Try again.')));
@@ -271,18 +266,18 @@ class _RequestTile extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               IconButton(
-                tooltip: 'Reject',
+                tooltip: 'Decline',
                 icon: const Icon(Icons.close, color: AppTheme.textSecondary),
                 onPressed: () async {
                   final messenger = ScaffoldMessenger.of(context);
                   try {
-                    await provider.followService.rejectRequest(
+                    await provider.palService.declineRequest(
                       requesterUid: requesterUid,
-                      targetUid: targetUid,
+                      myUid: targetUid,
                     );
                   } catch (_) {
                     messenger.showSnackBar(const SnackBar(
-                        content: Text('Could not reject. Try again.')));
+                        content: Text('Could not decline. Try again.')));
                   }
                 },
               ),

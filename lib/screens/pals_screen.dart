@@ -6,113 +6,116 @@ import '../widgets/shared_widgets.dart';
 import '../theme.dart';
 import 'profile_screen.dart';
 
-class PalsScreen extends StatefulWidget {
+/// A person's pals — mutual friendships. Tapping a pal opens their profile
+/// (where you can remove them). The + opens search to add new pals.
+class PalsScreen extends StatelessWidget {
   final String uid;
-  final int initialTab; // 0 = Pals, 1 = Following, 2 = Followers
-
-  const PalsScreen({super.key, required this.uid, this.initialTab = 0});
-
-  @override
-  State<PalsScreen> createState() => _PalsScreenState();
-}
-
-class _PalsScreenState extends State<PalsScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(
-      length: 3,
-      vsync: this,
-      initialIndex: widget.initialTab,
-    );
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+  const PalsScreen({super.key, required this.uid});
 
   @override
   Widget build(BuildContext context) {
-    final followService = context.read<AppProvider>().followService;
+    final provider = context.read<AppProvider>();
+    final isMe = provider.currentUser?.uid == uid;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Pals'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.person_search),
-            tooltip: 'Find pals',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const FindPalsScreen()),
+          if (isMe)
+            IconButton(
+              icon: const Icon(Icons.person_add_alt_1),
+              tooltip: 'Find pals',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const FindPalsScreen()),
+              ),
             ),
-          ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Pals'),
-            Tab(text: 'Following'),
-            Tab(text: 'Followers'),
-          ],
-          indicatorColor: AppTheme.accent,
-          labelColor: AppTheme.textPrimary,
-          unselectedLabelColor: AppTheme.textSecondary,
-        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          // Pals — mutual follows (reactive, updates after follow-backs)
-          StreamBuilder<List<AppUser>>(
-            stream: followService.palsStream(widget.uid),
-            builder: (ctx, snap) {
-              if (snap.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              return _UserList(
-                users: snap.data ?? [],
-                emptyMessage: 'No pals yet.\nWhen someone follows you back, they\'ll appear here.',
-                showFollowButton: true,
-              );
-            },
-          ),
+      body: StreamBuilder<List<AppUser>>(
+        stream: provider.palService.palsStream(uid),
+        builder: (ctx, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final pals = snap.data ?? [];
+          if (pals.isEmpty) return _empty(context, isMe);
+          return ListView.separated(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: pals.length,
+            separatorBuilder: (_, __) => const Divider(
+                height: 1, color: AppTheme.divider, indent: 72),
+            itemBuilder: (_, i) => _PalTile(user: pals[i]),
+          );
+        },
+      ),
+    );
+  }
 
-          // Following
-          StreamBuilder<List<AppUser>>(
-            stream: followService.followingUsers(widget.uid),
-            builder: (ctx, snap) {
-              if (snap.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              return _UserList(
-                users: snap.data ?? [],
-                emptyMessage: 'Not following anyone yet.\nTap the search icon above to find runners.',
-                showFollowButton: true,
-              );
-            },
+  Widget _empty(BuildContext context, bool isMe) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.people_outline,
+                  size: 48, color: AppTheme.textSecondary),
+              const SizedBox(height: 12),
+              Text(
+                isMe ? 'No pals yet.' : 'No pals yet.',
+                style: const TextStyle(color: AppTheme.textSecondary),
+              ),
+              if (isMe) ...[
+                const SizedBox(height: 4),
+                const Text(
+                  'Find runners and send a pal request.\nWhen they accept, they appear here.',
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const FindPalsScreen()),
+                  ),
+                  icon: const Icon(Icons.person_add_alt_1, size: 18),
+                  label: const Text('Find pals'),
+                ),
+              ],
+            ],
           ),
+        ),
+      );
+}
 
-          // Followers
-          StreamBuilder<List<AppUser>>(
-            stream: followService.followerUsers(widget.uid),
-            builder: (ctx, snap) {
-              if (snap.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              return _UserList(
-                users: snap.data ?? [],
-                emptyMessage: 'No followers yet.',
-                showFollowButton: true,
-              );
-            },
-          ),
-        ],
+class _PalTile extends StatelessWidget {
+  final AppUser user;
+  const _PalTile({required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      leading: UserAvatar(
+        photoUrl: user.photoUrl,
+        displayName: user.displayName,
+        radius: 24,
+      ),
+      title: Text(user.displayName,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+      subtitle: user.bio != null && user.bio!.isNotEmpty
+          ? Text(user.bio!,
+              style: const TextStyle(
+                  color: AppTheme.textSecondary, fontSize: 13),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis)
+          : Text('${user.racesCount} race${user.racesCount == 1 ? '' : 's'}',
+              style: const TextStyle(
+                  color: AppTheme.textSecondary, fontSize: 13)),
+      trailing: const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => ProfileScreen(uid: user.uid)),
       ),
     );
   }
@@ -151,7 +154,7 @@ class _FindPalsScreenState extends State<FindPalsScreen> {
     setState(() => _searching = true);
     final provider = context.read<AppProvider>();
     final myUid = provider.currentUser!.uid;
-    final users = await provider.followService.searchUsers(q);
+    final users = await provider.palService.searchUsers(q);
     if (!mounted) return;
     setState(() {
       _results = users.where((u) => u.uid != myUid).toList();
@@ -200,14 +203,13 @@ class _FindPalsScreenState extends State<FindPalsScreen> {
                 : !_searched
                     ? const Center(
                         child: Text('Search for runners by name',
-                            style:
-                                TextStyle(color: AppTheme.textSecondary)),
+                            style: TextStyle(color: AppTheme.textSecondary)),
                       )
                     : _results.isEmpty
                         ? const Center(
                             child: Text('No runners found with that name',
-                                style: TextStyle(
-                                    color: AppTheme.textSecondary)),
+                                style:
+                                    TextStyle(color: AppTheme.textSecondary)),
                           )
                         : ListView.separated(
                             padding:
@@ -227,6 +229,7 @@ class _FindPalsScreenState extends State<FindPalsScreen> {
   }
 }
 
+/// A search result with a pal button reflecting the current relationship.
 class _FoundUserTile extends StatefulWidget {
   final AppUser user;
   const _FoundUserTile({required this.user});
@@ -236,7 +239,7 @@ class _FoundUserTile extends StatefulWidget {
 }
 
 class _FoundUserTileState extends State<_FoundUserTile> {
-  FollowStatus? _status;
+  PalStatus? _status;
 
   @override
   void initState() {
@@ -247,12 +250,10 @@ class _FoundUserTileState extends State<_FoundUserTile> {
   Future<void> _loadStatus() async {
     try {
       final status =
-          await context.read<AppProvider>().getFollowStatus(widget.user.uid);
+          await context.read<AppProvider>().getPalStatus(widget.user.uid);
       if (mounted) setState(() => _status = status);
     } catch (_) {
-      // If the status check fails for any reason, still show a usable
-      // Follow button rather than an endless spinner.
-      if (mounted) setState(() => _status = FollowStatus.none);
+      if (mounted) setState(() => _status = PalStatus.none);
     }
   }
 
@@ -260,7 +261,7 @@ class _FoundUserTileState extends State<_FoundUserTile> {
     final previous = _status;
     setState(() => _status = null);
     try {
-      await context.read<AppProvider>().toggleFollow(widget.user);
+      await context.read<AppProvider>().togglePal(widget.user);
     } catch (_) {
       if (mounted) {
         setState(() => _status = previous);
@@ -275,20 +276,17 @@ class _FoundUserTileState extends State<_FoundUserTile> {
 
   @override
   Widget build(BuildContext context) {
-    final user = widget.user;
     return ListTile(
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       leading: UserAvatar(
-        photoUrl: user.photoUrl,
-        displayName: user.displayName,
+        photoUrl: widget.user.photoUrl,
+        displayName: widget.user.displayName,
         radius: 24,
       ),
-      title: Text(user.displayName,
-          style:
-              const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-      subtitle: user.bio != null && user.bio!.isNotEmpty
-          ? Text(user.bio!,
+      title: Text(widget.user.displayName,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+      subtitle: widget.user.bio != null && widget.user.bio!.isNotEmpty
+          ? Text(widget.user.bio!,
               style: const TextStyle(
                   color: AppTheme.textSecondary, fontSize: 13),
               maxLines: 1,
@@ -299,119 +297,10 @@ class _FoundUserTileState extends State<_FoundUserTile> {
               width: 20,
               height: 20,
               child: CircularProgressIndicator(strokeWidth: 2))
-          : TextButton(
-              onPressed: _toggle,
-              style: TextButton.styleFrom(
-                backgroundColor: _status == FollowStatus.none
-                    ? AppTheme.primary
-                    : AppTheme.surface,
-                foregroundColor: _status == FollowStatus.none
-                    ? Colors.white
-                    : AppTheme.textSecondary,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  side: _status == FollowStatus.none
-                      ? BorderSide.none
-                      : const BorderSide(color: AppTheme.divider),
-                ),
-              ),
-              child: Text(
-                _status == FollowStatus.none
-                    ? 'Follow'
-                    : _status == FollowStatus.following
-                        ? 'Following'
-                        : 'Requested',
-                style: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-            ),
+          : PalButton(status: _status!, onPressed: _toggle),
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => ProfileScreen(uid: user.uid)),
-      ),
-    );
-  }
-}
-
-class _UserList extends StatelessWidget {
-  final List<AppUser> users;
-  final String emptyMessage;
-  // When true, each row shows a Follow / Following button: on the Followers
-  // tab to follow back, and on the Following / Pals tabs to unfollow.
-  final bool showFollowButton;
-
-  const _UserList({
-    required this.users,
-    required this.emptyMessage,
-    this.showFollowButton = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (users.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.people_outline,
-                size: 48, color: AppTheme.textSecondary),
-            const SizedBox(height: 12),
-            Text(
-              emptyMessage,
-              style: const TextStyle(color: AppTheme.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: users.length,
-      separatorBuilder: (_, __) =>
-          const Divider(height: 1, color: AppTheme.divider, indent: 72),
-      itemBuilder: (ctx, i) => showFollowButton
-          ? _FoundUserTile(user: users[i])
-          : _PalTile(user: users[i]),
-    );
-  }
-}
-
-class _PalTile extends StatelessWidget {
-  final AppUser user;
-  const _PalTile({required this.user});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      leading: UserAvatar(
-        photoUrl: user.photoUrl,
-        displayName: user.displayName,
-        radius: 24,
-      ),
-      title: Text(
-        user.displayName,
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-      ),
-      subtitle: user.bio != null && user.bio!.isNotEmpty
-          ? Text(
-              user.bio!,
-              style: const TextStyle(
-                  color: AppTheme.textSecondary, fontSize: 13),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            )
-          : Text(
-              '${user.racesCount} race${user.racesCount == 1 ? '' : 's'}',
-              style: const TextStyle(
-                  color: AppTheme.textSecondary, fontSize: 13),
-            ),
-      trailing: const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => ProfileScreen(uid: user.uid)),
+        MaterialPageRoute(builder: (_) => ProfileScreen(uid: widget.user.uid)),
       ),
     );
   }

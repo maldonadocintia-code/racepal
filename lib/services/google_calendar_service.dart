@@ -31,7 +31,7 @@ class GoogleCalendarService {
         race.type,
         if (race.description != null && race.description!.isNotEmpty) race.description,
         if (race.website != null) race.website,
-        'Added via RacePal',
+        'Added via RacePals',
       ].join('\n');
 
       final event = gcal.Event()

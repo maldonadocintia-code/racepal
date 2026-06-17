@@ -76,4 +76,10 @@ class AppUser {
   );
 }
 
-enum FollowStatus { none, following, requested, self }
+/// Relationship between the current user and another, in the Pals model.
+///  - none: no connection
+///  - requested: you've sent them a pal request (awaiting their accept)
+///  - incoming: they've sent you a pal request (you can accept / decline)
+///  - pals: mutual — you're pals
+///  - self: it's you
+enum PalStatus { none, requested, incoming, pals, self }

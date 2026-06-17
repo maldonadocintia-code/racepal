@@ -11,34 +11,20 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
-    function isPublicUser(uid) {
-      // Treat a missing `isPublic` field as public, matching the app (which
-      // defaults missing -> true) and the signup default. Without the default,
-      // legacy accounts created before the field existed would be locked as
-      // private here while the app shows them as public.
-      return get(/databases/$(database)/documents/users/$(uid)).data.get('isPublic', true) == true;
-    }
-
-    function isFollowing(targetUid) {
-      return exists(/databases/$(database)/documents/follows/$(request.auth.uid + '_' + targetUid));
-    }
-
-    function canViewUser(uid) {
-      return isOwner(uid) || isPublicUser(uid) || isFollowing(uid);
+    // Pals are stored as two mirrored docs: pals/{owner}_{other}. We're pals with
+    // `otherUid` if the doc owned by us pointing at them exists.
+    function isPal(otherUid) {
+      return exists(/databases/$(database)/documents/pals/$(request.auth.uid + '_' + otherUid));
     }
 
     // ── Users ─────────────────────────────────────────────────────────────────
     match /users/{uid} {
       allow read: if isSignedIn();
       allow create: if isOwner(uid);
-      // Owner can update any field. Other signed-in users may only adjust the
-      // denormalised follower/following counts — needed because follow /
-      // unfollow / accept-request batches touch both users' docs at once.
-      allow update: if isOwner(uid) || (
-        isSignedIn() &&
-        request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['followersCount', 'followingCount'])
-      );
+      // Only the owner edits their profile. The Pals model no longer keeps
+      // denormalised follower counts on other users' docs, so no cross-user
+      // writes are needed.
+      allow update: if isOwner(uid);
       allow delete: if false;
     }
 
@@ -65,57 +51,58 @@ service cloud.firestore {
 
     // ── Reviews ───────────────────────────────────────────────────────────────
     match /reviews/{reviewId} {
-      // Public reviews visible to all signed-in users
-      // Followers-only reviews visible only to followers
+      // Public reviews visible to all signed-in users;
+      // pals-only reviews visible to the author and their pals.
       allow read: if isSignedIn() && (
         resource.data.isPublic == true ||
         isOwner(resource.data.userId) ||
-        isFollowing(resource.data.userId)
+        isPal(resource.data.userId)
       );
       allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
       allow update, delete: if isOwner(resource.data.userId);
     }
 
-    // ── Follows ───────────────────────────────────────────────────────────────
-    match /follows/{docId} {
+    // ── Pals ──────────────────────────────────────────────────────────────────
+    // Two mirrored docs per friendship: pals/{ownerUid}_{otherUid}. Created when
+    // a request is accepted (the accepter writes both directions); either party
+    // may delete (unfriend), which removes both docs.
+    match /pals/{docId} {
       allow read: if isSignedIn();
-      // Privacy is enforced HERE, not just on the client:
-      //  - The follower may create a direct follow ONLY if the target is
-      //    public. For a private target this rule denies the write, so the
-      //    client must go through follow_requests instead.
-      //  - The target may create the follow when accepting a request — but
-      //    only if a matching pending request actually exists, so they can't
-      //    fabricate followers / inflate someone's followingCount.
       allow create: if isSignedIn() && (
-        (request.auth.uid == request.resource.data.followerUid &&
-          isPublicUser(request.resource.data.followingUid)) ||
-        (request.auth.uid == request.resource.data.followingUid &&
-          exists(/databases/$(database)/documents/follow_requests/$(request.resource.data.followerUid + '_' + request.resource.data.followingUid)))
+        request.auth.uid == request.resource.data.ownerUid ||
+        request.auth.uid == request.resource.data.otherUid
       );
-      // Either side can delete: the follower unfollows, or the target removes
-      // a follower.
       allow delete: if isSignedIn() && (
-        request.auth.uid == resource.data.followerUid ||
-        request.auth.uid == resource.data.followingUid
+        request.auth.uid == resource.data.ownerUid ||
+        request.auth.uid == resource.data.otherUid
       );
     }
 
-    // ── Follow requests ───────────────────────────────────────────────────────
-    match /follow_requests/{docId} {
-      // resource == null covers reads of a not-yet-existing request doc
-      // (the common case when checking follow status) — without this the
-      // rule errors on the null resource and denies the read.
+    // ── Pal requests ────────────────────────────────────────────────────────────
+    match /pal_requests/{docId} {
+      // resource == null covers reads of a not-yet-existing request doc (status
+      // checks) — without it the rule errors on the null resource and denies.
       allow read: if isSignedIn() && (
         resource == null ||
-        request.auth.uid == resource.data.requesterUid ||
-        request.auth.uid == resource.data.targetUid
+        request.auth.uid == resource.data.fromUid ||
+        request.auth.uid == resource.data.toUid
       );
       allow create: if isSignedIn() &&
-        request.auth.uid == request.resource.data.requesterUid;
+        request.auth.uid == request.resource.data.fromUid;
       allow delete: if isSignedIn() && (
-        request.auth.uid == resource.data.requesterUid ||
-        request.auth.uid == resource.data.targetUid
+        request.auth.uid == resource.data.fromUid ||
+        request.auth.uid == resource.data.toUid
       );
+    }
+
+    // ── Legacy follows (read-only, for the one-off migration to Pals) ───────────
+    match /follows/{docId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+    match /follow_requests/{docId} {
+      allow read: if isSignedIn();
+      allow write: if false;
     }
 
     // ── Activity feed ─────────────────────────────────────────────────────────

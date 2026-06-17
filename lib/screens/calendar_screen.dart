@@ -42,7 +42,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget build(BuildContext context) {
     final provider = context.watch<AppProvider>();
     final uid = provider.currentUser!.uid;
-    final followingUids = provider.followingUids;
+    final palUids = provider.palUids;
 
     return Scaffold(
       appBar: AppBar(
@@ -83,8 +83,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
           Expanded(
             child: _monthView
-                ? _MonthView(uid: uid, followingUids: followingUids)
-                : _ListView(uid: uid, followingUids: followingUids),
+                ? _MonthView(uid: uid, palUids: palUids)
+                : _ListView(uid: uid, palUids: palUids),
           ),
         ],
       ),
@@ -100,12 +100,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
 Widget _entriesLoader(
   BuildContext context,
   String uid,
-  List<String> followingUids,
+  List<String> palUids,
   Widget Function(List<_Entry>) builder,
 ) {
   final provider = context.read<AppProvider>();
   return StreamBuilder<List<AppUser>>(
-    stream: provider.followService.followingUsers(uid),
+    stream: provider.palService.palsStream(uid),
     builder: (ctx, usersSnap) {
       final userMap = {
         for (final u in (usersSnap.data ?? const <AppUser>[])) u.uid: u
@@ -114,9 +114,9 @@ Widget _entriesLoader(
         stream: provider.raceService.userAttendances(uid),
         builder: (ctx, mySnap) {
           return StreamBuilder<List<Attendance>>(
-            stream: followingUids.isEmpty
+            stream: palUids.isEmpty
                 ? Stream.value(const <Attendance>[])
-                : provider.raceService.attendancesForUsers(followingUids),
+                : provider.raceService.attendancesForUsers(palUids),
             builder: (ctx, palSnap) {
               if (mySnap.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -314,16 +314,16 @@ Widget _miniTag(String label, Color color) => Container(
 
 class _ListView extends StatelessWidget {
   final String uid;
-  final List<String> followingUids;
-  const _ListView({required this.uid, required this.followingUids});
+  final List<String> palUids;
+  const _ListView({required this.uid, required this.palUids});
 
   @override
   Widget build(BuildContext context) {
-    return _entriesLoader(context, uid, followingUids, (entries) {
+    return _entriesLoader(context, uid, palUids, (entries) {
       if (entries.isEmpty) {
         return Center(
           child: Text(
-            followingUids.isEmpty
+            palUids.isEmpty
                 ? 'No races added yet.\nBrowse Explore, or switch to Month view and tap a day to add one.'
                 : 'No races yet — yours or your pals\'.',
             style: const TextStyle(color: AppTheme.textSecondary),
@@ -367,8 +367,8 @@ class _ListView extends StatelessWidget {
 
 class _MonthView extends StatefulWidget {
   final String uid;
-  final List<String> followingUids;
-  const _MonthView({required this.uid, required this.followingUids});
+  final List<String> palUids;
+  const _MonthView({required this.uid, required this.palUids});
 
   @override
   State<_MonthView> createState() => _MonthViewState();
@@ -380,7 +380,7 @@ class _MonthViewState extends State<_MonthView> {
 
   @override
   Widget build(BuildContext context) {
-    return _entriesLoader(context, widget.uid, widget.followingUids, (entries) {
+    return _entriesLoader(context, widget.uid, widget.palUids, (entries) {
       final events = <DateTime, List<_Entry>>{};
       for (final e in entries) {
         final day =

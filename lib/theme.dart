@@ -83,7 +83,7 @@ class AppTheme {
 }
 
 class AppConstants {
-  static const String appName = 'RacePal';
+  static const String appName = 'RacePals';
   static const String appVersion = '1.0.0';
 
   // Firestore collections
@@ -91,8 +91,10 @@ class AppConstants {
   static const String racesCol = 'races';
   static const String reviewsCol = 'reviews';
   static const String attendancesCol = 'attendances';
-  static const String followsCol = 'follows';
-  static const String followRequestsCol = 'follow_requests';
+  static const String followsCol = 'follows'; // legacy — read only, for migration
+  static const String followRequestsCol = 'follow_requests'; // legacy
+  static const String palsCol = 'pals';
+  static const String palRequestsCol = 'pal_requests';
   static const String activitiesCol = 'activities';
 
   // Race types

@@ -7,42 +7,45 @@ import '../models/race_model.dart';
 import '../models/review_model.dart';
 import '../services/auth_service.dart';
 import '../services/race_service.dart';
-import '../services/follow_service.dart';
+import '../services/pal_service.dart';
 
 class AppProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
   final RaceService _raceService = RaceService();
-  final FollowService _followService = FollowService();
+  final PalService _palService = PalService();
 
   AppUser? _currentUser;
-  List<String> _followingUids = [];
+  List<String> _palUids = [];
   bool _loading = false;
   String? _error;
 
   StreamSubscription? _userSub;
-  StreamSubscription? _followingSub;
+  StreamSubscription? _palsSub;
 
   AppUser? get currentUser => _currentUser;
-  List<String> get followingUids => _followingUids;
+  List<String> get palUids => _palUids;
   bool get loading => _loading;
   String? get error => _error;
   bool get isLoggedIn => _currentUser != null;
 
   AuthService get authService => _authService;
   RaceService get raceService => _raceService;
-  FollowService get followService => _followService;
+  PalService get palService => _palService;
 
   void init() {
     _authService.authStateChanges.listen((firebaseUser) {
       if (firebaseUser != null) {
+        _palService
+            .migrateIfNeeded(firebaseUser.uid)
+            .catchError((_) {}); // one-off follows -> pals, guarded internally
         _listenToUser(firebaseUser.uid);
-        _listenToFollowing(firebaseUser.uid);
+        _listenToPals(firebaseUser.uid);
         _autoCompletePastRaces(firebaseUser.uid);
       } else {
         _currentUser = null;
-        _followingUids = [];
+        _palUids = [];
         _userSub?.cancel();
-        _followingSub?.cancel();
+        _palsSub?.cancel();
         notifyListeners();
       }
     });
@@ -75,10 +78,10 @@ class AppProvider extends ChangeNotifier {
     });
   }
 
-  void _listenToFollowing(String uid) {
-    _followingSub?.cancel();
-    _followingSub = _followService.followingUids(uid).listen((uids) {
-      _followingUids = uids;
+  void _listenToPals(String uid) {
+    _palsSub?.cancel();
+    _palsSub = _palService.palUids(uid).listen((uids) {
+      _palUids = uids;
       notifyListeners();
     });
   }
@@ -104,7 +107,6 @@ class AppProvider extends ChangeNotifier {
   Future<void> updateProfile({
     String? displayName,
     String? bio,
-    bool? isPublic,
     String? photoUrl,
   }) async {
     if (_currentUser == null) return;
@@ -112,7 +114,6 @@ class AppProvider extends ChangeNotifier {
       uid: _currentUser!.uid,
       displayName: displayName,
       bio: bio,
-      isPublic: isPublic,
       photoUrl: photoUrl,
     );
   }
@@ -128,40 +129,47 @@ class AppProvider extends ChangeNotifier {
     return url;
   }
 
-  Future<FollowStatus> getFollowStatus(String targetUid) async {
-    if (_currentUser == null) return FollowStatus.none;
-    return _followService.getFollowStatus(
-      fromUid: _currentUser!.uid,
-      toUid: targetUid,
+  Future<PalStatus> getPalStatus(String otherUid) async {
+    if (_currentUser == null) return PalStatus.none;
+    return _palService.getStatus(
+      uid: _currentUser!.uid,
+      otherUid: otherUid,
     );
   }
 
-  Future<void> toggleFollow(AppUser target) async {
+  /// Drives the pal button: the action depends on the current status.
+  Future<void> togglePal(AppUser target) async {
     if (_currentUser == null) return;
-    final status = await getFollowStatus(target.uid);
+    final me = _currentUser!.uid;
+    final status = await getPalStatus(target.uid);
     switch (status) {
-      case FollowStatus.none:
-        await _followService.follow(
-          fromUid: _currentUser!.uid,
-          toUid: target.uid,
-          targetIsPublic: target.isPublic,
-        );
+      case PalStatus.none:
+        await _palService.sendRequest(fromUid: me, toUid: target.uid);
         break;
-      case FollowStatus.following:
-        await _followService.unfollow(
-          fromUid: _currentUser!.uid,
-          toUid: target.uid,
-        );
+      case PalStatus.requested:
+        await _palService.cancelRequest(fromUid: me, toUid: target.uid);
         break;
-      case FollowStatus.requested:
-        await _followService.cancelRequest(
-          fromUid: _currentUser!.uid,
-          toUid: target.uid,
-        );
+      case PalStatus.incoming:
+        await _palService.acceptRequest(requesterUid: target.uid, myUid: me);
         break;
-      case FollowStatus.self:
+      case PalStatus.pals:
+        await _palService.removePal(uid: me, otherUid: target.uid);
+        break;
+      case PalStatus.self:
         break;
     }
+  }
+
+  Future<void> acceptPalRequest(String requesterUid) async {
+    if (_currentUser == null) return;
+    await _palService.acceptRequest(
+        requesterUid: requesterUid, myUid: _currentUser!.uid);
+  }
+
+  Future<void> declinePalRequest(String requesterUid) async {
+    if (_currentUser == null) return;
+    await _palService.declineRequest(
+        requesterUid: requesterUid, myUid: _currentUser!.uid);
   }
 
   Future<void> addRace(Race race) async {
@@ -233,7 +241,7 @@ class AppProvider extends ChangeNotifier {
   @override
   void dispose() {
     _userSub?.cancel();
-    _followingSub?.cancel();
+    _palsSub?.cancel();
     super.dispose();
   }
 }

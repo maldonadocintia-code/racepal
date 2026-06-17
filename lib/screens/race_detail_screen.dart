@@ -462,7 +462,7 @@ class _PalsSectionState extends State<_PalsSection> {
 
   Future<void> _loadPals() async {
     final provider = context.read<AppProvider>();
-    final pals = await provider.followService.getPals(widget.uid);
+    final pals = await provider.palService.getPals(widget.uid);
     if (mounted) setState(() => _palUids = pals.map((p) => p.uid).toSet());
   }
 
@@ -797,7 +797,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
                 child: Row(
                   children: [
                     Radio<bool>(value: false, groupValue: _isPublic, onChanged: (v) => setState(() => _isPublic = v!)),
-                    const Text('Followers', style: TextStyle(fontSize: 13)),
+                    const Text('Pals only', style: TextStyle(fontSize: 13)),
                   ],
                 ),
               ),

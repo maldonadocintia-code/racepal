@@ -85,20 +85,6 @@ class _ProfileBody extends StatelessWidget {
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  if (!user.isPublic) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.lock, size: 13, color: AppTheme.textSecondary),
-                        SizedBox(width: 4),
-                        Text(
-                          'Private account',
-                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ],
                   if (user.bio != null && user.bio!.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
@@ -145,7 +131,7 @@ class _ProfileBody extends StatelessWidget {
                         child: StreamBuilder<List<AppUser>>(
                           stream: context
                               .read<AppProvider>()
-                              .followService
+                              .palService
                               .palsStream(user.uid),
                           builder: (ctx, snap) => _stat(
                             'Pals',
@@ -172,7 +158,7 @@ class _ProfileBody extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   if (!isMe)
-                    _FollowButtonWidget(user: user),
+                    _PalButtonWidget(user: user),
                 ],
               ),
             ),
@@ -226,16 +212,16 @@ class _ProfileBody extends StatelessWidget {
   }
 }
 
-class _FollowButtonWidget extends StatefulWidget {
+class _PalButtonWidget extends StatefulWidget {
   final AppUser user;
-  const _FollowButtonWidget({required this.user});
+  const _PalButtonWidget({required this.user});
 
   @override
-  State<_FollowButtonWidget> createState() => _FollowButtonWidgetState();
+  State<_PalButtonWidget> createState() => _PalButtonWidgetState();
 }
 
-class _FollowButtonWidgetState extends State<_FollowButtonWidget> {
-  FollowStatus _status = FollowStatus.none;
+class _PalButtonWidgetState extends State<_PalButtonWidget> {
+  PalStatus _status = PalStatus.none;
   bool _loading = true;
 
   @override
@@ -245,17 +231,17 @@ class _FollowButtonWidgetState extends State<_FollowButtonWidget> {
   }
 
   Future<void> _load() async {
-    final s = await context.read<AppProvider>().getFollowStatus(widget.user.uid);
+    final s = await context.read<AppProvider>().getPalStatus(widget.user.uid);
     if (mounted) setState(() { _status = s; _loading = false; });
   }
 
   @override
   Widget build(BuildContext context) {
     if (_loading) return const SizedBox(height: 40);
-    return FollowButton(
+    return PalButton(
       status: _status,
       onPressed: () async {
-        await context.read<AppProvider>().toggleFollow(widget.user);
+        await context.read<AppProvider>().togglePal(widget.user);
         _load();
       },
     );
