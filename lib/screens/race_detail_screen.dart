@@ -714,13 +714,17 @@ class _ReviewSheetState extends State<ReviewSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
+      // Pad by the keyboard height so the sheet lifts above it, and make the
+      // content scrollable so the "Post review" button is always reachable
+      // (previously it could sit hidden behind the keyboard).
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
         left: 20,
         right: 20,
         top: 20,
       ),
-      child: Column(
+      child: SingleChildScrollView(
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -815,6 +819,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
           ),
           const SizedBox(height: 20),
         ],
+        ),
       ),
     );
   }

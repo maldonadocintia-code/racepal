@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/race_model.dart';
 import '../models/review_model.dart';
@@ -164,11 +165,13 @@ class RaceService {
   // ── Reviews ────────────────────────────────────────────────────────────────
 
   Future<void> addReview(Review review) async {
-    final batch = _db.batch();
     final reviewRef = _db.collection(AppConstants.reviewsCol).doc();
-    batch.set(reviewRef, review.toMap());
-    await batch.commit();
-    await _recalcRaceStats(review.raceId);
+    await reviewRef.set(review.toMap());
+    // The review is saved — that's all the user is waiting on. Recalculating the
+    // race's aggregate rating re-reads every review, so run it in the background
+    // rather than blocking the "Post review" tap. The reviews list updates live
+    // via its stream; the average refreshes a moment later.
+    unawaited(_recalcRaceStats(review.raceId));
   }
 
   Future<void> _recalcRaceStats(String raceId) async {

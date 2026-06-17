@@ -235,7 +235,8 @@ class AppProvider extends ChangeNotifier {
       createdAt: DateTime.now(),
     );
     await _raceService.addReview(review);
-    await _raceService.postActivity(ActivityItem(
+    // Don't make the user wait for the feed entry — post it in the background.
+    unawaited(_raceService.postActivity(ActivityItem(
       id: '',
       userId: _currentUser!.uid,
       userName: _currentUser!.displayName,
@@ -246,7 +247,7 @@ class AppProvider extends ChangeNotifier {
       rating: rating,
       reviewBody: body,
       createdAt: DateTime.now(),
-    ));
+    )));
   }
 
   @override
