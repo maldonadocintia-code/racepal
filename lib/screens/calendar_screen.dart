@@ -7,6 +7,7 @@ import '../models/race_model.dart';
 import '../models/review_model.dart';
 import '../models/user_model.dart';
 import '../theme.dart';
+import '../widgets/plan_add_sheet.dart';
 import 'race_detail_screen.dart';
 
 /// Mine = purple (theme primary), Pals = teal.
@@ -34,7 +35,8 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
-  bool _monthView = false;
+  // Default to month view so the "tap a day to add a race" flow is visible.
+  bool _monthView = true;
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +46,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Calendar'),
+        title: const Text('Plan'),
         actions: [
           IconButton(
             icon: Icon(_monthView
@@ -322,7 +324,7 @@ class _ListView extends StatelessWidget {
         return Center(
           child: Text(
             followingUids.isEmpty
-                ? 'No races added yet.\nFind events on Discover!'
+                ? 'No races added yet.\nBrowse Explore, or switch to Month view and tap a day to add one.'
                 : 'No races yet — yours or your pals\'.',
             style: const TextStyle(color: AppTheme.textSecondary),
             textAlign: TextAlign.center,
@@ -441,23 +443,50 @@ class _MonthViewState extends State<_MonthView> {
             ),
           ),
           const Divider(height: 1, color: AppTheme.divider),
-          if (selectedEntries.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(24),
-              child: Text('No events on this day',
-                  style: TextStyle(color: AppTheme.textSecondary)),
-            )
-          else
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                children: selectedEntries.map((e) => _entryRow(context, e)).toList(),
-              ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              children: [
+                _addButton(context, _selectedDay),
+                const SizedBox(height: 12),
+                if (selectedEntries.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text('Nothing planned on this day yet.',
+                        style: TextStyle(color: AppTheme.textSecondary)),
+                  )
+                else
+                  ...selectedEntries.map((e) => _entryRow(context, e)),
+              ],
             ),
+          ),
         ],
       );
     });
   }
+
+  Widget _addButton(BuildContext context, DateTime date) => GestureDetector(
+        onTap: () => showPlanAddSheet(context, date),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 13),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.primary),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.add, size: 18, color: AppTheme.primary),
+              const SizedBox(width: 6),
+              Text('Add a race on ${DateFormat('d MMM').format(date)}',
+                  style: const TextStyle(
+                      color: AppTheme.primary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14)),
+            ],
+          ),
+        ),
+      );
 
   Widget _dot(Color color) => Container(
       width: 7,

@@ -92,7 +92,7 @@ class _PalsScreenState extends State<PalsScreen>
               }
               return _UserList(
                 users: snap.data ?? [],
-                emptyMessage: 'Not following anyone yet.\nFind runners in Discover!',
+                emptyMessage: 'Not following anyone yet.\nTap the search icon above to find runners.',
                 showFollowButton: true,
               );
             },

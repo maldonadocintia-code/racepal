@@ -37,10 +37,6 @@ class _MapScreenState extends State<MapScreen> {
   _Seg _seg = _Seg.all;
   bool _isListView = true; // list is the default — faster, no map-tile cost
 
-  // Name search — when set, matches by name across everything (ignores radius)
-  final TextEditingController _searchCtrl = TextEditingController();
-  String _query = '';
-
   bool _parkrunsLoaded = false;
   bool _eventsLoaded = false;
   List<Map<String, dynamic>> _parkrunData = [];
@@ -65,7 +61,6 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void dispose() {
     _mapController?.dispose();
-    _searchCtrl.dispose();
     super.dispose();
   }
 
@@ -132,15 +127,10 @@ class _MapScreenState extends State<MapScreen> {
     final res = <_Result>[];
     final now = DateTime.now();
     final nextSat = _nextSaturday();
-    final q = _query.trim().toLowerCase();
 
-    // When a name query is typed, match by name/address across everything and
-    // ignore the radius (so you can jump to an event you know, anywhere).
-    bool keep(double? dist, String title, String address) {
-      if (q.isNotEmpty) {
-        return title.toLowerCase().contains(q) ||
-            address.toLowerCase().contains(q);
-      }
+    // Explore filters by location + radius only. Finding a race you already
+    // know by name lives on the Plan tab (tap a date to add it).
+    bool keep(double? dist) {
       if (_place != null) return dist != null && dist <= _radius;
       return true;
     }
@@ -153,7 +143,7 @@ class _MapScreenState extends State<MapScreen> {
         final dist = _distOf(lat, lng);
         final title = '${p['name']} parkrun';
         final address = (p['location'] ?? '') as String;
-        if (!keep(dist, title, address)) continue;
+        if (!keep(dist)) continue;
         res.add(_Result(
           markerKey: 'pr_${p['id']}',
           lat: lat,
@@ -184,7 +174,7 @@ class _MapScreenState extends State<MapScreen> {
         final dist = _distOf(lat, lng);
         final title = (e['name'] ?? '') as String;
         final address = (e['address'] ?? e['city'] ?? '') as String;
-        if (!keep(dist, title, address)) continue;
+        if (!keep(dist)) continue;
         res.add(_Result(
           markerKey: 'fa_${e['url']}',
           lat: lat,
@@ -208,7 +198,7 @@ class _MapScreenState extends State<MapScreen> {
           continue;
         }
         final dist = _distOf(r.lat, r.lng);
-        if (!keep(dist, r.name, r.location)) continue;
+        if (!keep(dist)) continue;
         res.add(_Result(
           markerKey: 'race_${r.id}',
           lat: r.lat!,
@@ -399,7 +389,7 @@ class _MapScreenState extends State<MapScreen> {
                   backgroundColor: AppTheme.primary,
                   foregroundColor: Colors.white,
                   icon: const Icon(Icons.add_location_alt_outlined),
-                  label: const Text('Add race'),
+                  label: const Text('Add new event'),
                 ),
           body: SafeArea(
             bottom: false,
@@ -479,40 +469,6 @@ class _MapScreenState extends State<MapScreen> {
       ),
       child: Column(
         children: [
-          // Name search — find a specific race/parkrun by name
-          Container(
-            decoration: BoxDecoration(
-              color: AppTheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.divider),
-            ),
-            child: TextField(
-              controller: _searchCtrl,
-              onChanged: (v) {
-                setState(() => _query = v);
-                _rebuild();
-              },
-              decoration: InputDecoration(
-                hintText: 'Search by race or parkrun name',
-                prefixIcon:
-                    const Icon(Icons.search, color: AppTheme.textSecondary),
-                suffixIcon: _query.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear,
-                            color: AppTheme.textSecondary),
-                        onPressed: () {
-                          _searchCtrl.clear();
-                          setState(() => _query = '');
-                          _rebuild();
-                        },
-                      )
-                    : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
           // Location search bar
           GestureDetector(
             onTap: _openLocationPicker,
@@ -669,11 +625,9 @@ class _MapScreenState extends State<MapScreen> {
         alignment: Alignment.topCenter,
         padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
         child: Text(
-          _query.isNotEmpty
-              ? 'No races or parkruns match "$_query".'
-              : _place != null
-                  ? 'Nothing within ${_radius.round()} miles of ${_place!.name}.\nTry a bigger radius.'
-                  : 'No upcoming races or parkruns found.',
+          _place != null
+              ? 'Nothing within ${_radius.round()} miles of ${_place!.name}.\nTry a bigger radius.'
+              : 'No upcoming races or parkruns found.',
           textAlign: TextAlign.center,
           style: const TextStyle(color: AppTheme.textSecondary),
         ),

@@ -8,7 +8,10 @@ import '../models/race_model.dart';
 import '../theme.dart';
 
 class AddRaceScreen extends StatefulWidget {
-  const AddRaceScreen({super.key});
+  /// When opened from the Plan tab's "add manually" fallback, the date the
+  /// user tapped is pre-filled into the manual race form.
+  final DateTime? initialDate;
+  const AddRaceScreen({super.key, this.initialDate});
 
   @override
   State<AddRaceScreen> createState() => _AddRaceScreenState();
@@ -34,7 +37,7 @@ class _AddRaceScreenState extends State<AddRaceScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add Event'),
+        title: const Text('Add new event'),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -48,9 +51,9 @@ class _AddRaceScreenState extends State<AddRaceScreen>
       ),
       body: TabBarView(
         controller: _tabController,
-        children: const [
-          _ManualRaceForm(),
-          _ParkrunSelector(),
+        children: [
+          _ManualRaceForm(initialDate: widget.initialDate),
+          const _ParkrunSelector(),
         ],
       ),
     );
@@ -58,7 +61,8 @@ class _AddRaceScreenState extends State<AddRaceScreen>
 }
 
 class _ManualRaceForm extends StatefulWidget {
-  const _ManualRaceForm();
+  final DateTime? initialDate;
+  const _ManualRaceForm({this.initialDate});
 
   @override
   State<_ManualRaceForm> createState() => _ManualRaceFormState();
@@ -72,6 +76,12 @@ class _ManualRaceFormState extends State<_ManualRaceForm> {
   String _type = '10K';
   DateTime? _date;
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _date = widget.initialDate;
+  }
 
   @override
   void dispose() {
@@ -184,7 +194,7 @@ class _ManualRaceFormState extends State<_ManualRaceForm> {
               onPressed: _saving ? null : _submit,
               child: _saving
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Add race'),
+                  : const Text('Add event'),
             ),
           ),
         ],
@@ -309,7 +319,7 @@ class _ParkrunSelectorState extends State<_ParkrunSelector> {
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppTheme.primary.withOpacity(0.15),
+              color: AppTheme.primary.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppTheme.primary),
             ),
@@ -389,7 +399,7 @@ class _ParkrunSelectorState extends State<_ParkrunSelector> {
                     style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                 onTap: () => setState(() => _selected = p),
                 selected: _selected?['id'] == p['id'],
-                selectedTileColor: AppTheme.primary.withOpacity(0.08),
+                selectedTileColor: AppTheme.primary.withValues(alpha: 0.08),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               );
             },

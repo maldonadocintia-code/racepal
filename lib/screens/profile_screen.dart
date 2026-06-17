@@ -176,22 +176,6 @@ class _ProfileBody extends StatelessWidget {
                 ],
               ),
             ),
-
-            const Divider(height: 1, color: AppTheme.divider),
-
-            // Activity
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Row(
-                children: const [
-                  Text(
-                    'Recent activity',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
-                  ),
-                ],
-              ),
-            ),
-            _ActivityList(uid: user.uid, isPublic: user.isPublic, isMe: isMe),
           ],
         ),
       ),
@@ -273,73 +257,6 @@ class _FollowButtonWidgetState extends State<_FollowButtonWidget> {
       onPressed: () async {
         await context.read<AppProvider>().toggleFollow(widget.user);
         _load();
-      },
-    );
-  }
-}
-
-class _ActivityList extends StatelessWidget {
-  final String uid;
-  final bool isPublic;
-  final bool isMe;
-
-  const _ActivityList({
-    required this.uid,
-    required this.isPublic,
-    required this.isMe,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final provider = context.read<AppProvider>();
-    // If private and not me, don't show activity
-    if (!isPublic && !isMe) {
-      return const Padding(
-        padding: EdgeInsets.all(32),
-        child: Center(
-          child: Column(
-            children: [
-              Icon(Icons.lock, size: 36, color: AppTheme.textSecondary),
-              SizedBox(height: 8),
-              Text(
-                'This account is private.\nFollow to see their activity.',
-                style: TextStyle(color: AppTheme.textSecondary),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return StreamBuilder<List<ActivityItem>>(
-      stream: provider.raceService.userActivity(uid),
-      builder: (ctx, snap) {
-        final items = snap.data ?? [];
-        if (items.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.all(24),
-            child: Center(
-              child: Text('No activity yet',
-                  style: TextStyle(color: AppTheme.textSecondary)),
-            ),
-          );
-        }
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: items.length,
-          itemBuilder: (ctx, i) => ActivityCard(
-            item: items[i],
-            onRaceTap: () => Navigator.push(
-              ctx,
-              MaterialPageRoute(
-                builder: (_) => RaceDetailScreen(raceId: items[i].raceId),
-              ),
-            ),
-          ),
-        );
       },
     );
   }

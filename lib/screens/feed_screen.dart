@@ -22,16 +22,6 @@ class FeedScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            const Icon(Icons.bolt, color: AppTheme.accent, size: 26),
-            const SizedBox(width: 8),
-            Text(
-              AppConstants.appName,
-              style: Theme.of(context).appBarTheme.titleTextStyle,
-            ),
-          ],
-        ),
         actions: [
           StreamBuilder<List<Map<String, dynamic>>>(
             stream: provider.followService.pendingRequests(myUid),

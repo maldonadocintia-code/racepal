@@ -241,12 +241,4 @@ class RaceService {
         .snapshots()
         .map((s) => s.docs.map((d) => ActivityItem.fromDoc(d)).toList());
   }
-
-  Stream<List<ActivityItem>> userActivity(String userId) => _db
-      .collection(AppConstants.activitiesCol)
-      .where('userId', isEqualTo: userId)
-      .orderBy('createdAt', descending: true)
-      .limit(20)
-      .snapshots()
-      .map((s) => s.docs.map((d) => ActivityItem.fromDoc(d)).toList());
 }

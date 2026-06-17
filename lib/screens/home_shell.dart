@@ -47,9 +47,9 @@ class _HomeShellState extends State<HomeShell> {
           type: BottomNavigationBarType.fixed,
           items: const [
             BottomNavigationBarItem(
-              icon: Icon(Icons.map_outlined),
-              activeIcon: Icon(Icons.map),
-              label: 'Map',
+              icon: Icon(Icons.explore_outlined),
+              activeIcon: Icon(Icons.explore),
+              label: 'Explore',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.people_outline),
@@ -59,7 +59,7 @@ class _HomeShellState extends State<HomeShell> {
             BottomNavigationBarItem(
               icon: Icon(Icons.calendar_month_outlined),
               activeIcon: Icon(Icons.calendar_month),
-              label: 'Calendar',
+              label: 'Plan',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),
