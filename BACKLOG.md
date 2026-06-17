@@ -9,6 +9,10 @@ Effort: **S** = a few hours · **M** = a day or two · **L** = multiple sessions
 | # | Item | Notes | Effort | Status |
 |---|---|---|---|---|
 | B1 | Can't reach map / view toggle not visible | Map/List toggle now an explicit button in the Discover header. | S | ✅ Resolved (v0.2.8) |
+| B2 | Can't unfollow / unfollow option not visible | Pals model replaced follows; you remove a pal from their profile ("Pals ✓" → tap). | S | ✅ Resolved (v0.2.11 / v0.2.13) |
+| B3 | Accepting a pal request crashes | Batch-deleting a non-existent reverse request denied the whole batch (rule read null `resource.data`). | S | ✅ Resolved (v0.2.14) |
+| B4 | Race duplication on Explore | Skipped Firestore copies of bundled races (`createdBy == 'system'`). | S | ✅ Resolved (v0.2.15) |
+| B5 | Race info wrong / "made up" (bad addresses, websites) | Root cause: findarace data had mislabelled city/address fields. Replaced bundled data with a curated, verified Manchester set. | M | ✅ Resolved (v0.2.15) |
 
 ---
 
@@ -21,7 +25,8 @@ Effort: **S** = a few hours · **M** = a day or two · **L** = multiple sessions
 | 3 | Distance filter on search | Runners think in distances (5K, 10K, half, marathon) — needed for discovery. NOTE: unreliable name-matching distance chips were **removed** in the discovery-screen simplification (option C). A proper distance filter (using real distance data) is still wanted later. | M | 📋 Not started |
 | 6 | Parkrun ratings & reviews | Reviews aggregate on a stable venue doc `pr_{id}`; per-Saturday attendance kept for the calendar. | M | ✅ Done (v0.2.7) |
 | 10 | Region/radius search ("near Manchester within 10 mi") | Done: typed location (assets/uk_places.json gazetteer) + radius slider, results sorted by distance. Supersedes #3. Follow-up: expand the towns list as needed. | M | ✅ Done (v0.2.8) |
-| 11 | Add Run North West Races data | Add Run North West (NW England race organiser) events to the dataset — needs name, date, location, coords per event. Data-sourcing task. | M | 📋 Not started |
+| 11 | Add Run North West Races data | Curated Manchester-area set added v0.2.15 (`assets/manchester_races.json`) incl. dated Run North West events. **Still pending:** their 3 undated 2027 races (Trafford 10K, Alderley Edge 10K, Quarry Bank Trail) — add once dates are published. | M | 🟡 Partly done (v0.2.15) |
+| 12 | Pals friendship model | Replaced follow/follower/mutual + public-private with one symmetric "Pals" friendship (request → accept → pals both ways). In-app alerts via Feed bell + Feed-tab badge. Migration from legacy follows. | L | ✅ Done (v0.2.13–v0.2.14) |
 
 ## Priority 2 — Polish
 
@@ -123,3 +128,8 @@ Effort: **S** = a few hours · **M** = a day or two · **L** = multiple sessions
 | Pal search by first/last name (case-insensitive) | v0.2.9 |
 | Follow requests visible (dropped index-requiring orderBy) | v0.2.10 |
 | Pals list reactive (palsStream) | v0.2.10 |
+| Unfollow from Following/Pals lists; server-side privacy | v0.2.11 |
+| Map→Explore, Calendar→Plan; tap-a-date add flow; Feed header cleanup; profile recent-activity removed | v0.2.12 |
+| Pals friendship model (request/accept); app renamed RacePals; "Add new event" wording | v0.2.13 |
+| Accept-pal crash fix; incoming-request badge on Feed tab | v0.2.14 |
+| Curated Manchester race set (hid findarace/major); Explore dedup fix | v0.2.15 |

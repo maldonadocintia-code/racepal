@@ -1,4 +1,4 @@
-# RacePal — Session Context
+# RacePals — Session Context
 
 Use this file to brief Claude at the start of a new session:
 > "Read CONTEXT.md and use it as the starting point for this session."
@@ -9,11 +9,12 @@ Also read: `BACKLOG.md` (outstanding work), `PROJECT_INSTRUCTIONS.md` (how to wo
 
 ## What the app is
 
-**RacePal** — Flutter Android app for UK runners. Discover races & parkruns on a map, log attendance, write reviews, follow other runners ("Pals"). Sideloaded APK, no Play Store. Firebase backend.
+**RacePals** — Flutter Android app for UK runners. Discover races & parkruns near a location, log attendance, write reviews, and connect with other runners as **Pals**. Sideloaded APK, no Play Store. Firebase backend.
 
+- App display name: **RacePals** (renamed v0.2.13). **Package id, repo and Firebase project keep the old `racepal` name** — only the user-facing name changed.
 - GitHub: https://github.com/maldonadocintia-code/racepal (public)
 - Latest release: https://github.com/maldonadocintia-code/racepal/releases/latest
-- Current version: **v0.2.10-beta**
+- Current version: **v0.2.15-beta**
 - Firebase project: **racepal-ae334**
 
 ---
@@ -23,106 +24,112 @@ Also read: `BACKLOG.md` (outstanding work), `PROJECT_INSTRUCTIONS.md` (how to wo
 | Layer | Technology |
 |---|---|
 | UI | Flutter / Dart (Android only) |
-| Package ID | `com.racepal.app` |
+| Package ID | `com.racepal.app` (unchanged despite the RacePals rename) |
 | Auth | Firebase Auth (Google Sign-In) |
 | Database | Cloud Firestore |
 | Storage | Firebase Storage (profile photos) |
-| Maps | `google_maps_flutter: ^2.9.0` |
-| Calendar | `table_calendar: ^3.1.2` |
-| Image upload | `image_picker: ^1.0.7` |
-| State | `provider: ^6.1.2` — central `AppProvider` (`ChangeNotifier`) |
-| Build | Kotlin DSL, Java 21, `android/app/build.gradle.kts` |
-| Test device | Pixel 9 — `adb -s 46140DLAQ0047E` |
+| Maps | `google_maps_flutter` |
+| Calendar | `table_calendar` |
+| State | `provider` — central `AppProvider` (`ChangeNotifier`) |
+| Build | Kotlin DSL, `android/app/build.gradle.kts` |
+| Test device | Pixel 9 (arm64) |
 
 ### Maps API key
 - Stored in `android/local.properties` as `maps.apiKey=...`
 - **This file is gitignored — NEVER commit it**
 - Key is restricted to package `com.racepal.app` + SHA-1 in Google Cloud Console
-- Read by `build.gradle.kts` via `manifestPlaceholders`
 
 ---
 
 ## Navigation — 4 tabs
 
 ```
-Map  |  Feed  |  Calendar  |  Me
+Explore  |  Feed  |  Plan  |  Me
 ```
+
+(Renamed v0.2.12: Map→Explore, Calendar→Plan.)
 
 | Tab | File | Notes |
 |---|---|---|
-| Map | `lib/screens/map_screen.dart` | Full-screen Google Map + list view toggle |
-| Feed | `lib/screens/feed_screen.dart` | Activity feed from followed users |
-| Calendar | `lib/screens/calendar_screen.dart` | My races + Pals races toggle, month picker |
-| Me | `lib/screens/profile_screen.dart` | Profile, stats, pals, reviews |
+| Explore | `lib/screens/map_screen.dart` | Discover races/parkruns near a location (location + radius). List default; Map toggle. |
+| Feed | `lib/screens/feed_screen.dart` | Activity from your **pals** (+ you). App-bar bell = incoming pal requests. |
+| Plan | `lib/screens/calendar_screen.dart` | Your race calendar (month default + list). Tap a day to add a race. |
+| Me | `lib/screens/profile_screen.dart` | Profile, tappable stats (Races / Pals / Reviews). |
 
-Shell/nav: `lib/screens/home_shell.dart`
+Shell/nav: `lib/screens/home_shell.dart` — also renders the **incoming-pal-request count as a badge on the Feed tab** (visible from any tab).
 
 ---
 
-## All Source Files
+## The Pals model (v0.2.13 — replaced follow/follower)
+
+A single **symmetric friendship**. No more one-directional follows, no follower/following lists, no account public/private.
+
+- **Flow:** Add pal → sends a request → they **Accept** → you're pals, **both ways, instantly**.
+- **`PalStatus`** (`lib/models/user_model.dart`): `none` / `requested` (you asked) / `incoming` (they asked you → "Accept pal") / `pals` (tap to remove) / `self`.
+- **Storage:** two mirrored docs `pals/{ownerUid}_{otherUid}` (so rules + "my pals" queries stay simple), plus `pal_requests/{fromUid}_{toUid}`.
+- **Bell + badge:** incoming requests show in the Feed bell sheet (Accept / Decline) and as a count badge on the Feed bottom-nav tab.
+- **Migration:** `PalService.migrateIfNeeded(uid)` runs once per user on launch (guarded by `palsMigrated` on the user doc): legacy mutual follows → pals (both docs written); one-directional follow → a pending pal request from the follower. Legacy `follows`/`follow_requests` are read-only in rules now.
+
+---
+
+## Source Files
 
 ### Screens
 | File | Purpose |
 |---|---|
-| `lib/screens/map_screen.dart` | Hero **Discover** screen (v0.2.8 redesign). **Location + radius search**: tap location bar → type a town (gazetteer type-ahead) → radius slider → results within radius **sorted by distance**, addresses shown. All/Parkruns/Races segment. List default; Map toggle shows a radius circle. Parkrun panel → "I'm doing this" (Saturday picker) + "Reviews" (venue detail). `_LocationPickerSheet`, `_Result` model inside. |
-| `lib/screens/race_detail_screen.dart` | Race detail — attendance buttons (Going / Attended / Not going / Review), reviews list. **Parkruns** use a venue doc `pr_<id>`: row shows "Plan a date" (Saturday picker) + "Review"; per-date attendee/pals sections hidden |
-| `lib/widgets/parkrun_helpers.dart` | Shared parkrun Saturday-picker + `planParkrunDate()` (used by map + race detail) |
-| `lib/screens/add_race_screen.dart` | Community-add a race (Firestore write) |
-| `lib/screens/calendar_screen.dart` | Month + list calendar (v0.2.8). **No Me/Pals tabs** — mine (purple) and pals (teal) shown together; pals' races show **their avatars** (variant C). `_entriesLoader` builds combined `_Entry` list. |
-| `lib/screens/feed_screen.dart` | Activity feed from followingUids; appbar bell → pending follow-requests sheet (badge + Accept/Reject) |
-| `lib/screens/profile_screen.dart` | Profile — photo, bio. **Tappable stats: Races (completed, from attendances) / Pals / Reviews** → `_UserRacesScreen` / PalsScreen / `_UserReviewsScreen`. Recent activity list. |
-| `lib/screens/edit_profile_screen.dart` | Edit name/bio/photo. Camera or gallery pick → Firebase Storage upload |
-| `lib/screens/pals_screen.dart` | 3 tabs: Pals / Following / Followers. Search in appbar → FindPalsScreen |
-| `lib/screens/login_screen.dart` | Google Sign-In entry screen |
+| `lib/screens/map_screen.dart` | **Explore**. Location + radius discovery only (**name search removed** v0.2.12 — find a known race on Plan instead). All/Parkruns/Races segment, list↔map toggle (list avoids Maps tile charges). FAB **"Add new event"** → `AddRaceScreen` (creates a community race in the shared collection). Dedup: skips Firestore races with `createdBy == 'system'` so bundled races don't show twice. |
+| `lib/screens/calendar_screen.dart` | **Plan**. Defaults to **month** view so tap-to-add is discoverable. Colour-coded: mine (purple) + pals (teal, with avatars). Tap a day → day panel with **"Add a race on \<date>"** → `showPlanAddSheet`. |
+| `lib/widgets/plan_add_sheet.dart` | **Tap-a-date add sheet** (v0.2.12). Search bundled curated races + parkruns + **user-created** Firestore races (`createdBy != 'system'`); tap to add to your calendar. Parkruns use the **tapped date**; known races keep their **own fixed date**. "Add it manually" → `AddRaceScreen(initialDate: date)`. |
+| `lib/screens/add_race_screen.dart` | Create a race (Race tab, optional `initialDate`) or add a parkrun (Parkrun tab). Title **"Add new event"**; manual submit "Add event". |
+| `lib/screens/race_detail_screen.dart` | Race detail — attendance (Going/Attended/Not going), reviews. Review visibility radio: **Everyone / Pals only**. Parkruns use venue doc `pr_<id>` + Saturday picker. Shows pals who are going (`palService.getPals`). |
+| `lib/widgets/parkrun_helpers.dart` | Shared parkrun Saturday-picker + `planParkrunDate()`. |
+| `lib/screens/feed_screen.dart` | Feed from `provider.palUids` (+ self). Bell → `_PalRequestsSheet` (incoming requests, Accept/Decline). |
+| `lib/screens/profile_screen.dart` | Profile — photo, bio, **tappable stats Races/Pals/Reviews**. Pal button (`_PalButtonWidget`) for other users. (No "recent activity" — removed v0.2.12 as it duplicated the Feed; no private-account label — public/private dropped v0.2.13.) |
+| `lib/screens/pals_screen.dart` | **Single Pals list** + "Find pals" search (→ `FindPalsScreen`, `_FoundUserTile` with pal button). (Following/Followers tabs removed v0.2.13.) |
+| `lib/screens/edit_profile_screen.dart` | Edit name/bio/photo. (Public/private toggle removed v0.2.13.) |
+| `lib/screens/login_screen.dart` | Google Sign-In entry. |
 
 ### Models
 | File | Key Classes |
 |---|---|
-| `lib/models/race_model.dart` | `Race` — includes `recommendPercent`, `lightningBolt` (⚡ badge) |
-| `lib/models/review_model.dart` | `Review`, `Attendance`, `AttendanceStatus` (`going` / `attended` / `interested`) |
-| `lib/models/user_model.dart` | `AppUser`, `ActivityItem`, `Follow`, `FollowStatus` |
+| `lib/models/race_model.dart` | `Race` — incl. `recommendPercent`, `lightningBolt` (⚡), `createdBy`. `Race.fromParkrunJson`. |
+| `lib/models/review_model.dart` | `Review`, `Attendance`, `AttendanceStatus` (`going`/`attended`/`interested`). |
+| `lib/models/user_model.dart` | `AppUser`, `ActivityItem`, **`PalStatus`**. (`isPublic`/`followersCount`/`followingCount` fields remain but are dormant/unused.) |
 
 ### Services
 | File | Purpose |
 |---|---|
-| `lib/services/app_provider.dart` | Central state — auth, `currentUser`, `followingUids`, `setAttendance`, `submitReview`, `toggleFollow`, `uploadProfilePhoto` |
-| `lib/services/race_service.dart` | `ensureRace()`, `setAttendance()`, `removeAttendance()`, `submitReview()`, `attendancesForUsers()`, `_recalcRaceStats()` |
-| `lib/services/follow_service.dart` | `follow()`, `unfollow()`, `getPals()` + **`palsStream()`** (reactive mutual-follow), **`searchUsers()`** (client-side case-insensitive `contains`, 30s cache), `pendingRequests()` (no orderBy — sorts client-side), `acceptRequest()`/`rejectRequest()`, `getFollowStatus()`, `followingUsers()`, `followerUsers()` |
-| `lib/services/auth_service.dart` | Google Sign-In, `updateProfile()` |
-| `lib/services/places_service.dart` | Loads `assets/uk_places.json`; `PlacesService.search()` type-ahead (place → coords) for Discover. Offline, free. |
-| `lib/services/google_calendar_service.dart` | Google Calendar integration (export) |
+| `lib/services/app_provider.dart` | Central state — auth, `currentUser`, **`palUids`**, `setAttendance`, `submitReview`, **`getPalStatus` / `togglePal` / `acceptPalRequest` / `declinePalRequest`**, `uploadProfilePhoto`. Calls `palService.migrateIfNeeded` on sign-in. |
+| `lib/services/pal_service.dart` | **The Pals service** (replaced `follow_service.dart`): `getStatus`, `sendRequest`, `cancelRequest`, `acceptRequest`, `declineRequest`, `removePal`, `palUids`/`palsStream`/`getPals`, `incomingRequests` (no orderBy — sorts client-side), `searchUsers` (client-side `contains`, 30s cache, ≤500 users), `migrateIfNeeded`. |
+| `lib/services/race_service.dart` | `ensureRace()`, `setAttendance()`, `addReview()`, `attendancesForUsers()`, `upcomingRaces()`, `feedForUser()`, `_recalcRaceStats()`. |
+| `lib/services/auth_service.dart` | Google Sign-In, `updateProfile()` (no `isPublic`). |
+| `lib/services/places_service.dart` | Loads `assets/uk_places.json`; `PlacesService.search()` type-ahead for Explore location search. Offline, free. |
+| `lib/services/google_calendar_service.dart` | Google Calendar export (built, not wired to a button). |
 
 ### Other
 | File | Purpose |
 |---|---|
-| `lib/main.dart` | App entry, Firebase init |
-| `lib/theme.dart` | `AppTheme` — colours, text styles (note: Calendar pals colour `_palColor` teal `#22D3EE` is local to calendar_screen) |
-| `lib/widgets/shared_widgets.dart` | `UserAvatar`, `RaceCard`, shared UI components |
-| `lib/utils/geo.dart` | `milesBetween()` — haversine distance in miles for radius search |
-| `lib/firebase_options.dart` | Firebase config (auto-generated, committed) |
+| `lib/main.dart` | App entry, Firebase init, `RacePalApp` (class name unchanged). |
+| `lib/theme.dart` | `AppTheme` (purple `#6C3CE1`, accent `#FFD600`), `AppConstants` (collection names incl. `palsCol`, `palRequestsCol`; `appName = 'RacePals'`). Calendar pals teal `#22D3EE` is local to `calendar_screen`. |
+| `lib/widgets/shared_widgets.dart` | `UserAvatar`, `ActivityCard`, **`PalButton`** (states: Add pal / Requested / Accept pal / Pals ✓). |
+| `lib/utils/geo.dart` | `milesBetween()` haversine for radius search. |
 
 ---
 
 ## Data Assets
 
-| File | Contents |
-|---|---|
-| `assets/parkruns_uk.json` | 884 UK parkruns — `id, name, location, lat, lng` |
-| `assets/findarace_uk.json` | ~1,190 UK races — `name, url, startDate, city, lat, lng, price, description` |
-| `assets/major_races_uk.json` | 55 major UK races 2026–2027 — `name, city, lat, lng, startDate, url, price` (price is a **string**, e.g. `"From £60"`, not a number) |
-| `assets/uk_places.json` | ~120 UK towns/cities — `name, lat, lng`. Gazetteer for Discover location search (place → coords). Starter set; expandable. |
+| File | Bundled? | Contents |
+|---|---|---|
+| `assets/parkruns_uk.json` | ✅ | 884 UK parkruns — `id, name, location, lat, lng` |
+| `assets/manchester_races.json` | ✅ | **Curated, web-verified ~20 Manchester-area races** (v0.2.15): Run North West, RunThrough (Media City / Tatton Park / Heaton Park — each date a separate entry), Manchester Half, Manchester Marathon, Great Manchester Run, Wilmslow. Schema: `name, url, startDate, description, city, address, lat, lng, distance`. |
+| `assets/uk_places.json` | ✅ | ~120 UK towns — gazetteer for Explore location search. |
+| `assets/findarace_uk.json` | ❌ (in repo, **not bundled**) | ~1,190 scraped races — **hidden** v0.2.15 (unreliable: mislabelled city/address fields). |
+| `assets/major_races_uk.json` | ❌ (in repo, **not bundled**) | 60 national races — superseded by the curated Manchester set. |
+
+> The curated set replaced the bundled bulk data because the findarace entries had mislabelled locations (the `address` field was often a random nearby business). Keep the curated file as the single bundled race source; re-source/expand deliberately.
 
 ### Map markers
-- Green = parkruns
-- Orange = findarace events
-- Yellow = community-added (Firestore)
-- Major races come from `major_races_uk.json`, rendered as orange markers alongside findarace events
-
-### Deterministic race IDs
-- Parkruns: `pr_${parkrunId}_${yyyyMMdd}`
-- Findarace events: `fa_${slug}`
-- Major races: `mr_${slug}`
-- Community races: UUID (from `add_race_screen.dart`)
+- Green = parkruns · Orange = curated races · (user-created races also orange)
 
 ---
 
@@ -130,141 +137,98 @@ Shell/nav: `lib/screens/home_shell.dart`
 
 ```
 races/{raceId}
-  name, lat, lng, date, type, creatorUid
+  name, location, lat, lng, date, type, category, createdBy, website, description
   reviewCount, averageRating, recommendPercent, lightningBolt, attendeeCount
 
 attendances/{uid}_{raceId}
-  uid, raceId, status (going/attended/interested), date
+  userId, raceId, status (going/attended/interested), ...
 
 reviews/{reviewId}
-  raceId, uid, rating, text, recommend, visibility (public/followers_only)
+  raceId, userId, rating, body, recommend, isPublic (true = Everyone, false = Pals only)
 
 users/{uid}
-  displayName, photoUrl, bio, racesCount, followersCount, followingCount
+  displayName, photoUrl, bio, createdAt, palsMigrated
+  (legacy isPublic/followersCount/followingCount may exist but are unused)
 
-follows/{followerId}_{targetId}
-  followerUid, targetUid, createdAt
+pals/{ownerUid}_{otherUid}          # two mirrored docs per friendship
+  ownerUid, otherUid, createdAt
 
-follow_requests/{requestId}
-  requesterUid, targetUid, status
+pal_requests/{fromUid}_{toUid}
+  fromUid, toUid, createdAt
 
-activity/{activityId}
-  type, actorUid, targetUid, raceId, timestamp
+activities/{actId}
+  userId, userName, userPhotoUrl, type (going/attended/review), raceId, raceName, createdAt
+
+follows/, follow_requests/          # LEGACY — read-only (migration source only)
 ```
 
 ---
 
-## Firebase / Firestore Rules
+## Firebase / Firestore Rules (`firestore.rules`)
 
-- Races: creator can edit; any signed-in user can update aggregate fields only
-- Reviews: public visible to all; followers-only visible to followers; owner can edit/delete
-- `follow_requests` read rule has `resource == null ||` guard (needed for non-existent doc reads — bug was fixed in v0.2.5)
-- Deploy rules: `firebase deploy --only firestore:rules --project racepal-ae334`
-- Deploy storage rules: `firebase deploy --only storage --project racepal-ae334`
+- **users**: read if signed-in; create/update/delete by owner only (no cross-user count writes any more).
+- **races**: creator edits; any signed-in user may update aggregate stat fields only.
+- **reviews**: visible if `isPublic == true`, owner, or `isPal(author)`; create by self; edit/delete by owner.
+- **pals**: read if signed-in; create/delete if you're either party in the doc (`ownerUid` or `otherUid`).
+- **pal_requests**: read if signed-in and you're `fromUid`/`toUid` (with `resource == null ||` guard for status checks); create if `fromUid == you`; delete if you're either party.
+- **follows / follow_requests**: read-only (`allow write: if false`) — kept for migration.
+- Deploy: `firebase deploy --only firestore:rules --project racepal-ae334` (a **production action** — confirm with the user first).
 
-### Storage rules (`storage.rules`)
-```
-match /profile_photos/{userId}.jpg {
-  allow read: if true;
-  allow write: if request.auth != null && request.auth.uid == userId;
-}
-```
+**GOTCHA:** never batch-delete a doc that may not exist when its delete rule reads `resource.data.*` — a null `resource` errors and **denies the whole batch**. This caused the v0.2.13 accept-pal crash. See memory `project_firestore_batch_delete_gotcha`.
 
 ---
 
-## Current Release State (v0.2.10-beta)
+## Release history (recent)
 
-### New in v0.2.10-beta
-- **Follow requests visible again** — `pendingRequests` dropped the `.orderBy('createdAt')` that needed a missing `(targetUid+createdAt)` composite index (it sorts client-side now). Requests show in the **Feed bell** (top-right), not on the profile.
-- **Pals list reactive** — new `FollowService.palsStream(uid)` (combines following + followers streams via a StreamController) replaces the one-shot `getPals` future in the Pals tab + profile count, so it updates live after a follow / follow-back.
-
-### New in v0.2.9-beta
-- **Name search restored** — Discover has a "search by race/parkrun name" box again, alongside location+radius (a name query searches everything, ignoring radius).
-- **Pal search fixed** — `searchUsers` now matches first OR last name, case-insensitive (client-side `contains` over a 30s-cached user list; was a case-sensitive prefix-only query).
-
-### New in v0.2.8-beta
-- **Discover = location + radius search** — type a town (offline UK-towns gazetteer), set a radius slider, results **sorted by distance** (finds nearby towns name-search missed), addresses shown, radius circle on map. Replaces name-only search.
-- **Calendar colour-coded** — dropped Me/Pals tabs; mine (purple) + pals (teal) shown together; pals shown with **their avatars** (variant C). List + month views.
-- **Profile tappable counts** — Races (completed, derived from attendances) / Pals / Reviews open their lists. Dead `racesCount` field no longer used for the count.
-
-### Earlier — v0.2.7-beta
-- Parkrun ratings & reviews via stable venue doc `pr_<id>`; follow "Could not update" rules fix; in-app follow requests (Feed bell)
-
-### What's working
-- Discovery: Parkruns / Races tabs + search, list (default) ↔ map toggle (list avoids Maps tile charges)
-- Parkrun markers (884), findarace events, major UK races
-- Month filter on Races tab (all data loaded, filtered client-side)
-- Parkrun "I'm doing this" — date picker for any of next 16 Saturdays
-- Parkrun reviews/ratings on the venue page
-- Attendance: Going / Attended / Not going (any race, any time)
-- Profile photo upload (camera or gallery) → Firebase Storage ✅ live
-- Profile edit (name, bio, photo)
-- Reviews with star rating + recommend flag + lightning bolt badge
-- Follow / unfollow / follow-back in Pals; follow requests via Feed bell
-- Google Sign-In
-- Feed screen (activity from followed users)
-- Calendar with Pals toggle + month picker
-- Pals shown on race detail (avatar, name, Going / Been here status)
-
-### Project docs (root of repo)
-| File | Purpose |
-|---|---|
-| `CONTEXT.md` | Technical brief for Claude — start each session with "Read CONTEXT.md" |
-| `BACKLOG.md` | Prioritised outstanding work — kept up to date as work is done |
-| `USE_CASES.md` | Full list of app use cases |
-| `PROJECT_DESCRIPTION.md` | One-paragraph product vision |
-| `PROJECT_INSTRUCTIONS.md` | How Claude should work on this project |
-
-### Known pending items
-See [BACKLOG.md](BACKLOG.md) for the full prioritised list.
+- **v0.2.15** — Curated Manchester race set (hid findarace/major); fixed Explore race duplication.
+- **v0.2.14** — Fixed accept-pal crash (batch-delete gotcha); incoming-request badge on Feed tab.
+- **v0.2.13** — **Pals friendship model** (replaced follows); app renamed **RacePals**; "Add new event" wording; migration from follows.
+- **v0.2.12** — Map→Explore (name search removed) / Calendar→Plan; tap-a-date add flow (`plan_add_sheet`); Feed header cleaned; profile "recent activity" removed.
+- **v0.2.11** — Unfollow from lists; privacy enforced server-side (since superseded by Pals).
+- **v0.2.10** — (pre-Pals) follow requests visible; reactive pals.
 
 ---
 
 ## Dev Commands
 
-```powershell
-# Build release APK
-cd c:\Users\maldo\.claude\racepal
-flutter build apk --release
+```bash
+# Build release APKs split per ABI (full APK upload times out — attach arm64 only)
+flutter build apk --release --split-per-abi
+#   → build/app/outputs/flutter-apk/app-arm64-v8a-release.apk  (Pixel 9 + modern phones)
 
-# Install on Pixel 9
-adb -s 46140DLAQ0047E install -r build\app\outputs\flutter-apk\app-release.apk
+# Analyze
+flutter analyze lib/
 
-# Run in debug mode on device
-flutter run -d 46140DLAQ0047E
-
-# Deploy Firestore rules
+# Deploy Firestore rules (production — confirm first)
 firebase deploy --only firestore:rules --project racepal-ae334
 
-# Deploy Storage rules (only after Storage is enabled in console)
-firebase deploy --only storage --project racepal-ae334
-
-# Check outdated packages
-flutter pub outdated
-
-# Publish a GitHub Release (gh CLI is installed & authenticated)
-gh release create v0.2.x-beta "build\app\outputs\flutter-apk\app-release.apk#RacePal-v0.2.x-beta.apk" --title "v0.2.x-beta" --notes "..."
+# Publish a GitHub Release (gh CLI authed as maldonadocintia-code)
+gh release create v0.2.x-beta "build/app/outputs/flutter-apk/app-arm64-v8a-release.apk#RacePals-v0.2.x-beta-arm64.apk" --title "v0.2.x-beta" --notes-file <file> --latest
+# Also copy the APK to C:\Users\maldo\OneDrive\Desktop\
 ```
+
+> Releases are done **by the agent via `gh`**, not manual upload. Bump `version:` in `pubspec.yaml` (e.g. `0.2.15+16`) and commit before building. Direct push to `master` needs the user's OK (the harness prompts).
 
 ---
 
 ## Key Design Decisions / Gotchas
 
-- **Price field in JSON is a string** — `major_races_uk.json` uses `"From £60"` not a number. The `_EventPanel` on the map handles this: `price is num ? '£${price.toStringAsFixed(0)}' : price.toString()`
-- **No Play Store** — APK is sideloaded. Distributed via GitHub Releases, published by Claude using the `gh` CLI (installed & authenticated as `maldonadocintia-code`) — **not manual upload**. `gh release create v<ver> <apk>#<nice-name>.apk --notes ...`
-- **Maps billing** — ~$0.007 per map load. $200/month free tier (recurring, separate from $300 trial credit). List view loads zero tiles. Budget alert: Google Cloud Console → Billing → Budgets & alerts.
-- **`ensureRace()`** — Creates a Firestore race doc on demand with a deterministic ID when a user taps "I'm doing this" on a parkrun/event. Prevents duplicates.
-- **Pals = mutual follows** — implemented as set intersection in `followService.getPals()`. Not stored as a separate collection.
-- **`lightningBolt`** — set to `true` on a race when `recommendPercent >= 80` AND `reviewCount >= 10`. Shown as ⚡ badge on race cards.
-- **Maps API key** — lives only in `android/local.properties` (gitignored). Never commit it.
-- **`AttendanceStatus`** is in `lib/models/review_model.dart` (not race_model) — slightly non-obvious.
+- **Pals = explicit symmetric friendship** (`pals/{a}_{b}` mirrored docs), not derived from follows any more.
+- **Batch-delete of a non-existent doc denies the whole batch** when the rule reads `resource.data` (see above).
+- **`ensureRace()`** — creates a Firestore race doc on demand with a deterministic id when a user adds a parkrun/curated race. Idempotent (no-op if it exists), so it's safe to call when adding an already-existing community race.
+- **Deterministic race IDs** — parkruns `pr_<venueId>_<yyyyMMdd>`; curated events `fa_<urlSlug>` (or `evt_<name>_<date>` if no url); community races: Firestore auto-id.
+- **Tapped-date semantics** — on Plan, parkruns are added on the tapped date; a known race keeps its own fixed date (shown in the result), since fixed-date races can't move.
+- **`lightningBolt`** — `recommendPercent >= 0.8` AND `reviewCount >= 10`. ⚡ badge.
+- **`AttendanceStatus`** lives in `lib/models/review_model.dart` (not race_model).
+- **No Play Store** — sideloaded APK via GitHub Releases.
+- **Maps billing** — list view loads zero tiles; map view costs ~$0.007/load. Free tier $200/mo.
 
 ---
 
-## Google Cloud / Billing
+## Backlog highlights (see BACKLOG.md)
 
-- Project: `racepal-ae334` on Google Cloud
-- Maps API key restricted to package `com.racepal.app`
-- Currently on $300 / 90-day free trial — cannot be charged during trial
-- After trial: if not upgraded, Maps go grey (no charge); if upgraded to paid, budget alert needed
-- Set alert: Cloud Console → Billing → Budgets & alerts → Create budget → ~£10 threshold
+- **GDPR account deletion** (required before public launch).
+- **Scalable search** (SC1) — `searchUsers` loads ≤500 users; Plan add-search sees ≤30 upcoming community races.
+- **Run North West** — add the 3 undated 2027 races (Trafford 10K, Alderley Edge 10K, Quarry Bank Trail) once dated; expand the curated set as needed.
+- **Privacy/cleanup** — audit legacy follows (PR1), unused-rule check (PR2), delete `prototype/explore_plan_mockup.html` (C1).
+- README/profile polish, font-size consistency, calendar/profile load perf.

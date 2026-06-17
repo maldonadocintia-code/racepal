@@ -1,22 +1,21 @@
-# ⚡ RacePal
+# ⚡ RacePals
 
-A social calendar for UK runners — track races and parkruns, follow friends, and share ⚡ lightning-bolt reviews.
+A social calendar for UK runners — discover races and parkruns, plan your calendar, connect with **Pals**, and share ⚡ lightning-bolt reviews.
 
-Distributed as a sideloaded APK (no Play Store needed).
+Distributed as a sideloaded APK (no Play Store needed). (Package id / repo / Firebase keep the original `racepal` name.)
 
 ---
 
 ## Features
 
 - **Google Sign-In** — one-tap auth
-- **UK Parkrun directory** — 100+ locations pre-loaded
-- **Manual race entry** — add any 5K, 10K, half, marathon, ultra, etc.
-- **Going / Attended tracking** — mark your intent or completed runs
-- **⚡ Lightning-bolt ratings** — 1–5 bolts instead of stars
-- **Written reviews** — with finish time and public/followers-only visibility
-- **Follow model** — follow public accounts directly; request to follow private ones
-- **Activity feed** — see what people you follow are running and reviewing
-- **Profile pages** — public/private toggle, bio, stats
+- **Explore** — discover races & parkruns near a location (town + radius search), list or map
+- **Plan** — your race calendar (month + list, colour-coded you vs pals); **tap a day to add a race** you already know, or add one manually
+- **Curated race data** — a verified Manchester-area set + 884 UK parkruns; community-added races shared with everyone
+- **Going / Attended tracking** — mark intent or completed runs
+- **⚡ Lightning-bolt reviews** — 1–5 bolts, finish time, visibility **Everyone / Pals only**
+- **Pals** — a symmetric friendship: Add pal → they Accept → you're pals, both ways. In-app request alerts (Feed bell + tab badge)
+- **Activity feed** — what your pals are running and reviewing
 
 ---
 
@@ -121,25 +120,31 @@ lib/
   services/
     auth_service.dart        # Google Sign-In, profile CRUD
     race_service.dart        # Races, attendance, reviews, feed
-    follow_service.dart      # Follow graph, requests, user search
+    pal_service.dart         # Pals graph, pal requests, user search, migration
+    places_service.dart      # UK towns gazetteer (Explore location search)
     app_provider.dart        # Central ChangeNotifier, wires everything
 
   screens/
     login_screen.dart
-    home_shell.dart          # Bottom nav shell
-    feed_screen.dart         # Following activity feed
-    discover_screen.dart     # Search races + runners
-    calendar_screen.dart     # Personal upcoming/past calendar
+    home_shell.dart          # Bottom nav shell (Explore/Feed/Plan/Me) + Feed badge
+    feed_screen.dart         # Pals' activity feed + pal-request bell
+    map_screen.dart          # Explore — location + radius discovery
+    calendar_screen.dart     # Plan — calendar + tap-a-date add
     race_detail_screen.dart  # Race page + attend + review sheet
-    profile_screen.dart      # User profile + activity
+    profile_screen.dart      # User profile + pal button
     edit_profile_screen.dart
-    add_race_screen.dart     # Manual race entry + parkrun selector
+    add_race_screen.dart     # Create a race / add a parkrun
 
   widgets/
-    shared_widgets.dart      # LightningRating, RaceCard, ActivityCard, etc.
+    shared_widgets.dart      # LightningRating, ActivityCard, PalButton, etc.
+    plan_add_sheet.dart      # Tap-a-date "add a race" sheet
+    parkrun_helpers.dart     # Parkrun Saturday picker
 
 assets/
-  parkruns_uk.json           # 100+ UK parkrun locations
+  parkruns_uk.json           # 884 UK parkrun locations
+  manchester_races.json      # Curated, verified Manchester-area races
+  uk_places.json             # UK towns gazetteer
+  # findarace_uk.json / major_races_uk.json kept but no longer bundled
 
 android/
 firestore.rules
@@ -152,8 +157,8 @@ firestore.indexes.json
 
 ```
 users/{uid}
-  displayName, email, photoUrl, bio
-  isPublic, followersCount, followingCount, racesCount, createdAt
+  displayName, email, photoUrl, bio, createdAt, palsMigrated
+  (legacy isPublic/followersCount/followingCount may exist but are unused)
 
 races/{raceId}
   name, location, type, category (race|parkrun)
@@ -165,13 +170,15 @@ attendances/{userId_raceId}
 
 reviews/{reviewId}
   raceId, userId, userName, userPhotoUrl
-  rating (1-5), body, finishTime, isPublic, createdAt
+  rating (1-5), body, finishTime, isPublic (true=Everyone, false=Pals only), createdAt
 
-follows/{followerUid_followingUid}
-  followerUid, followingUid, createdAt
+pals/{ownerUid_otherUid}        # two mirrored docs per friendship
+  ownerUid, otherUid, createdAt
 
-follow_requests/{requesterUid_targetUid}
-  requesterUid, targetUid, createdAt
+pal_requests/{fromUid_toUid}
+  fromUid, toUid, createdAt
+
+# follows/ and follow_requests/ are legacy — read-only, kept only for migration
 
 activities/{actId}
   userId, userName, userPhotoUrl
