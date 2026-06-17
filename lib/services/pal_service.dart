@@ -76,11 +76,6 @@ class PalService {
     batch.delete(_db
         .collection(AppConstants.palRequestsCol)
         .doc('${requesterUid}_$myUid'));
-    // Clear any reverse request too (if we'd both requested each other), so no
-    // orphan request lingers once we're pals.
-    batch.delete(_db
-        .collection(AppConstants.palRequestsCol)
-        .doc('${myUid}_$requesterUid'));
     _writePalPair(batch, myUid, requesterUid);
     await batch.commit();
   }
