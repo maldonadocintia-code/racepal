@@ -2,7 +2,7 @@ name: racepal
 description: UK Race & Parkrun social calendar
 
 publish_to: 'none'
-version: 0.2.16+17
+version: 0.2.17+18
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
