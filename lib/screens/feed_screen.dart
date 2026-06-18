@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import 'package:timeago/timeago.dart' as timeago;
 import '../services/app_provider.dart';
 import '../models/review_model.dart';
 import '../models/user_model.dart';
@@ -73,29 +76,7 @@ class FeedScreen extends StatelessWidget {
                 }
                 final items = snap.data ?? [];
                 if (items.isEmpty) return _emptyFeed(context);
-
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: items.length,
-                  itemBuilder: (context, i) {
-                    final item = items[i];
-                    return ActivityCard(
-                      item: item,
-                      onRaceTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => RaceDetailScreen(raceId: item.raceId),
-                        ),
-                      ),
-                      onUserTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ProfileScreen(uid: item.userId),
-                        ),
-                      ),
-                    );
-                  },
-                );
+                return _FeedTimeline(items: items);
               },
             ),
     );
@@ -139,6 +120,217 @@ class FeedScreen extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => _PalRequestsSheet(myUid: myUid),
+    );
+  }
+}
+
+// ── Feed timeline (Variant A) ───────────────────────────────────────────────
+
+/// The activity feed as a vertical timeline: items are grouped under day
+/// headers (Today / Yesterday / …), each hanging off a coloured type-node on a
+/// connecting rail, with a relative timestamp and (for reviews) a quoted body.
+class _FeedTimeline extends StatelessWidget {
+  final List<ActivityItem> items;
+  const _FeedTimeline({required this.items});
+
+  // Day bucket for grouping. Items arrive newest-first, so buckets stay ordered.
+  static String _bucket(DateTime d) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final that = DateTime(d.year, d.month, d.day);
+    final diff = today.difference(that).inDays;
+    if (diff <= 0) return 'Today';
+    if (diff == 1) return 'Yesterday';
+    if (diff < 7) return 'Earlier this week';
+    return DateFormat('d MMM yyyy').format(d);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final children = <Widget>[];
+    String? lastBucket;
+    for (var i = 0; i < items.length; i++) {
+      final item = items[i];
+      final bucket = _bucket(item.createdAt);
+      if (bucket != lastBucket) {
+        children.add(_dayHeader(bucket));
+        lastBucket = bucket;
+      }
+      final isLastInBucket =
+          i == items.length - 1 || _bucket(items[i + 1].createdAt) != bucket;
+      children.add(_TimelineRow(item: item, isLast: isLastInBucket));
+    }
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+      children: children,
+    );
+  }
+
+  Widget _dayHeader(String label) => Padding(
+        padding: const EdgeInsets.fromLTRB(0, 14, 0, 6),
+        child: Text(
+          label.toUpperCase(),
+          style: const TextStyle(
+            color: AppTheme.textSecondary,
+            fontSize: AppTheme.fsCaption,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.8,
+          ),
+        ),
+      );
+}
+
+class _TimelineRow extends StatelessWidget {
+  final ActivityItem item;
+  final bool isLast;
+  const _TimelineRow({required this.item, required this.isLast});
+
+  // (colour, icon, verb) per activity type.
+  static (Color, IconData, String) _style(String type) {
+    switch (type) {
+      case 'going':
+        return (AppTheme.primary, Icons.place, 'is going to ');
+      case 'attended':
+        return (AppTheme.success, Icons.check_circle, 'attended ');
+      case 'review':
+        return (AppTheme.accent, Icons.bolt, 'reviewed ');
+      default:
+        return (AppTheme.primary, Icons.person_add, 'joined ');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final (color, icon, verb) = _style(item.type);
+
+    void openRace() => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => RaceDetailScreen(raceId: item.raceId),
+          ),
+        );
+    void openUser() => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => ProfileScreen(uid: item.userId)),
+        );
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Rail: coloured type node + connecting line down to the next item.
+          SizedBox(
+            width: 30,
+            child: Column(
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceLight,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: color, width: 2),
+                  ),
+                  child: Icon(icon, size: 15, color: color),
+                ),
+                if (!isLast)
+                  Expanded(
+                    child: Container(width: 2, color: AppTheme.divider),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Body
+          Expanded(
+            child: GestureDetector(
+              onTap: openRace,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text.rich(
+                            TextSpan(
+                              style: const TextStyle(
+                                color: AppTheme.textPrimary,
+                                fontSize: AppTheme.fsBody,
+                                height: 1.35,
+                              ),
+                              children: [
+                                TextSpan(
+                                  text: item.userName,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w700),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = openUser,
+                                ),
+                                TextSpan(text: ' $verb'),
+                                TextSpan(
+                                  text: item.raceName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          timeago.format(item.createdAt, locale: 'en_short'),
+                          style: const TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: AppTheme.fsCaption,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (item.rating != null) ...[
+                      const SizedBox(height: 4),
+                      LightningRating(rating: item.rating!, size: 15),
+                    ],
+                    if (item.reviewBody != null &&
+                        item.reviewBody!.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                        decoration: const BoxDecoration(
+                          color: AppTheme.surface,
+                          borderRadius:
+                              BorderRadius.only(
+                            topRight: Radius.circular(8),
+                            bottomRight: Radius.circular(8),
+                          ),
+                          border: Border(
+                            left: BorderSide(color: AppTheme.accent, width: 3),
+                          ),
+                        ),
+                        child: Text(
+                          item.reviewBody!,
+                          style: const TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: AppTheme.fsSecondary,
+                            height: 1.35,
+                          ),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

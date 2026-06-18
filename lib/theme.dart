@@ -11,6 +11,14 @@ class AppTheme {
   static const Color success = Color(0xFF4CAF50);
   static const Color divider = Color(0xFF2E2E45);
 
+  // Type scale — prefer these over ad-hoc font sizes so text stays consistent
+  // across screens (see BACKLOG #7). Title for headings, body for primary text,
+  // secondary for supporting text, caption for timestamps/labels.
+  static const double fsTitle = 16;
+  static const double fsBody = 14;
+  static const double fsSecondary = 13;
+  static const double fsCaption = 12;
+
   static ThemeData get dark => ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,

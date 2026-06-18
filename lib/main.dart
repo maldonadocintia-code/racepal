@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
+import 'package:timeago/timeago.dart' as timeago;
 import 'firebase_options.dart';
 import 'services/app_provider.dart';
 import 'screens/login_screen.dart';
@@ -9,6 +10,8 @@ import 'theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Compact relative timestamps for the feed ("2h", "1d") instead of the verbose default.
+  timeago.setLocaleMessages('en_short', timeago.EnShortMessages());
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
