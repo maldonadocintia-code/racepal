@@ -36,7 +36,7 @@ Effort: **S** = a few hours · **M** = a day or two · **L** = multiple sessions
 |---|---|---|---|---|
 | 4 | Profile page cleanup | Remove clutter, make it sleek | S | 📋 Not started |
 | 5 | README update | Out of date — mentions screens and features that no longer exist | S | 📋 Not started |
-| 7 | Font size consistency | A type scale now exists (`AppTheme.fsTitle/Body/Secondary/Caption`) and is applied in the new Feed. **Remaining:** roll it out across the other screens (profile, calendar, race detail, etc.) which still hardcode ad-hoc sizes. | S | 🟡 Started (scale defined; Feed done) |
+| 7 | Font size consistency | 6-step type scale in `theme.dart` (`AppTheme.fsDisplay 20 / fsHeading 18 / fsTitle 16 / fsBody 14 / fsSecondary 13 / fsCaption 12`) applied across all screens; odd sizes (15/17/22/24) snapped to the scale. Intentional micro labels (10/11) and the 40px login hero left as-is. **Best confirmed on-device** (broad visual change). | S | ✅ Done |
 | 8 | Follow-back on requests/new followers | When a new follower (or follow-requester) isn't followed back yet, show a "Follow back" action in the follow-requests sheet (Feed bell) — ideally Accept + follow-back in one tap to become Pals instantly. (Followers tab already has follow-back since v0.2.5.) | S | 📋 Not started |
 | 9 | Calendar/Profile load performance | Calendar re-fetched every race one-by-one on every redraw (burned Firestore reads). **Fixed:** added a 2-min TTL race-doc cache in `RaceService.getRace` (busted on stat writes), and split `_MonthView` into a stateless loader + stateful `_MonthCalendar` so day-tap/month-change no longer re-runs the loader. Profile `getRace` calls now share the same cache. | S | ✅ Done (calendar; cost fix) |
 

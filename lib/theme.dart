@@ -12,8 +12,13 @@ class AppTheme {
   static const Color divider = Color(0xFF2E2E45);
 
   // Type scale — prefer these over ad-hoc font sizes so text stays consistent
-  // across screens (see BACKLOG #7). Title for headings, body for primary text,
-  // secondary for supporting text, caption for timestamps/labels.
+  // across screens (see BACKLOG #7). Display for screen/section heroes, heading
+  // for sheet titles, title for card titles, body for primary text, secondary
+  // for supporting text, caption for timestamps/labels. (Tiny 10–11 micro
+  // labels — badges, calendar day-of-month — and the 40px login hero are
+  // deliberate one-offs and stay as-is.)
+  static const double fsDisplay = 20;
+  static const double fsHeading = 18;
   static const double fsTitle = 16;
   static const double fsBody = 14;
   static const double fsSecondary = 13;
@@ -39,7 +44,7 @@ class AppTheme {
       elevation: 0,
       titleTextStyle: TextStyle(
         color: textPrimary,
-        fontSize: 20,
+        fontSize: AppTheme.fsDisplay,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.3,
       ),
@@ -55,7 +60,7 @@ class AppTheme {
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+        textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: AppTheme.fsBody),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
@@ -74,7 +79,7 @@ class AppTheme {
     ),
     chipTheme: ChipThemeData(
       backgroundColor: surfaceLight,
-      labelStyle: const TextStyle(color: textPrimary, fontSize: 12),
+      labelStyle: const TextStyle(color: textPrimary, fontSize: AppTheme.fsCaption),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
     dividerColor: divider,

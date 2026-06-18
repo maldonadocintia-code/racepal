@@ -71,13 +71,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 const SizedBox(width: 6),
                 const Text('Mine',
                     style: TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 13)),
+                        color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
                 const SizedBox(width: 18),
                 _legendDot(_palColor),
                 const SizedBox(width: 6),
                 const Text('Pals',
                     style: TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 13)),
+                        color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
               ],
             ),
           ),
@@ -220,7 +220,7 @@ Widget _entryRow(BuildContext context, _Entry e) {
                 Text(DateFormat('d').format(e.race.date),
                     style: const TextStyle(
                         color: AppTheme.textPrimary,
-                        fontSize: 20,
+                        fontSize: AppTheme.fsDisplay,
                         fontWeight: FontWeight.w800)),
               ],
             ),
@@ -234,11 +234,11 @@ Widget _entryRow(BuildContext context, _Entry e) {
                     style: const TextStyle(
                         color: AppTheme.textPrimary,
                         fontWeight: FontWeight.w700,
-                        fontSize: 14)),
+                        fontSize: AppTheme.fsBody)),
                 const SizedBox(height: 2),
                 Text(e.race.location,
                     style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 12)),
+                        color: AppTheme.textSecondary, fontSize: AppTheme.fsCaption)),
                 if (e.pals.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Row(
@@ -271,7 +271,7 @@ Widget _entryRow(BuildContext context, _Entry e) {
                       Text(e.race.averageRating.toStringAsFixed(1),
                           style: const TextStyle(
                               color: AppTheme.accent,
-                              fontSize: 13,
+                              fontSize: AppTheme.fsSecondary,
                               fontWeight: FontWeight.w700)),
                     ],
                   )
@@ -307,7 +307,7 @@ Widget _miniTag(String label, Color color) => Container(
       ),
       child: Text(label,
           style: TextStyle(
-              color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+              color: color, fontSize: AppTheme.fsCaption, fontWeight: FontWeight.w600)),
     );
 
 // ── List view ────────────────────────────────────────────────────────────────
@@ -357,7 +357,7 @@ class _ListView extends StatelessWidget {
         child: Text(title,
             style: const TextStyle(
                 color: AppTheme.textSecondary,
-                fontSize: 12,
+                fontSize: AppTheme.fsCaption,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.8)),
       );
@@ -497,7 +497,7 @@ class _MonthCalendarState extends State<_MonthCalendar> {
                   style: const TextStyle(
                       color: AppTheme.primary,
                       fontWeight: FontWeight.w700,
-                      fontSize: 14)),
+                      fontSize: AppTheme.fsBody)),
             ],
           ),
         ),

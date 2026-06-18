@@ -84,7 +84,7 @@ class _RaceDetailBody extends StatelessWidget {
                   Text(
                     race.name,
                     style: const TextStyle(
-                      fontSize: 24,
+                      fontSize: AppTheme.fsDisplay,
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
                     ),
@@ -95,7 +95,7 @@ class _RaceDetailBody extends StatelessWidget {
                       const Icon(Icons.location_on, size: 16, color: Colors.white70),
                       const SizedBox(width: 4),
                       Text(race.location,
-                          style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                          style: const TextStyle(color: Colors.white70, fontSize: AppTheme.fsBody)),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -107,7 +107,7 @@ class _RaceDetailBody extends StatelessWidget {
                         race.isParkrun
                             ? 'Every Saturday · 9:00am'
                             : DateFormat('EEEE, d MMMM yyyy').format(race.date),
-                        style: const TextStyle(color: Colors.white70, fontSize: 14),
+                        style: const TextStyle(color: Colors.white70, fontSize: AppTheme.fsBody),
                       ),
                     ],
                   ),
@@ -119,7 +119,7 @@ class _RaceDetailBody extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           '${race.averageRating.toStringAsFixed(1)} · ${race.reviewCount} reviews',
-                          style: const TextStyle(color: Colors.white70, fontSize: 13),
+                          style: const TextStyle(color: Colors.white70, fontSize: AppTheme.fsSecondary),
                         ),
                       ],
                     ),
@@ -188,7 +188,7 @@ class _RaceDetailBody extends StatelessWidget {
           title,
           style: const TextStyle(
             fontWeight: FontWeight.w700,
-            fontSize: 17,
+            fontSize: AppTheme.fsTitle,
             color: AppTheme.textPrimary,
           ),
         ),
@@ -205,7 +205,7 @@ class _RaceDetailBody extends StatelessWidget {
     ),
     child: Text(
       race.type,
-      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+      style: const TextStyle(color: Colors.white, fontSize: AppTheme.fsCaption, fontWeight: FontWeight.w600),
     ),
   );
 
@@ -419,7 +419,7 @@ class _AttendanceRowState extends State<_AttendanceRow> {
                               ? Colors.red
                               : AppTheme.textSecondary,
                   fontWeight: FontWeight.w600,
-                  fontSize: 13,
+                  fontSize: AppTheme.fsSecondary,
                 ),
               ),
             ],
@@ -491,7 +491,7 @@ class _PalsSectionState extends State<_PalsSection> {
                     'Pals',
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
-                      fontSize: 17,
+                      fontSize: AppTheme.fsTitle,
                       color: AppTheme.textPrimary,
                     ),
                   ),
@@ -506,7 +506,7 @@ class _PalsSectionState extends State<_PalsSection> {
                       '${palAttendances.length}',
                       style: const TextStyle(
                         color: AppTheme.primary,
-                        fontSize: 12,
+                        fontSize: AppTheme.fsCaption,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -585,7 +585,7 @@ class _AttendeesList extends StatelessWidget {
           return const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Text('No attendees yet. Be the first!',
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
           );
         }
         return SizedBox(
@@ -631,7 +631,7 @@ class _ReviewSection extends StatelessWidget {
           return const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Text('No reviews yet.',
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
           );
         }
         return ListView.builder(
@@ -741,10 +741,10 @@ class _ReviewSheetState extends State<ReviewSheet> {
           const SizedBox(height: 16),
           Text(
             _isEditing ? 'Edit review' : 'Review: ${widget.race.name}',
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: AppTheme.fsTitle),
           ),
           const SizedBox(height: 16),
-          const Text('Your rating', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+          const Text('Your rating', style: TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
           const SizedBox(height: 8),
           LightningRating(
             rating: _rating,
@@ -773,7 +773,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
           ),
           const SizedBox(height: 16),
           const Text('Would you recommend this event?',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -862,7 +862,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
               style: TextStyle(
                 color: selected ? Colors.white : AppTheme.textSecondary,
                 fontWeight: FontWeight.w600,
-                fontSize: 14,
+                fontSize: AppTheme.fsBody,
               ),
             ),
           ),

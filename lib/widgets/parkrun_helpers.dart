@@ -45,7 +45,7 @@ Future<DateTime?> pickParkrunSaturday(BuildContext context) {
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text('Which Saturday are you running?',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: AppTheme.fsTitle)),
             ),
           ),
           Flexible(

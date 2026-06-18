@@ -95,14 +95,14 @@ class FeedScreen extends StatelessWidget {
               'Your feed is empty',
               style: TextStyle(
                 color: AppTheme.textPrimary,
-                fontSize: 20,
+                fontSize: AppTheme.fsDisplay,
                 fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 8),
             const Text(
               'Add pals to see their races, parkruns and reviews here.',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsBody),
               textAlign: TextAlign.center,
             ),
           ],
@@ -364,7 +364,7 @@ class _PalRequestsSheet extends StatelessWidget {
             const SizedBox(height: 16),
             const Text(
               'Pal requests',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              style: TextStyle(fontSize: AppTheme.fsHeading, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 16),
             StreamBuilder<List<Map<String, dynamic>>>(
@@ -424,7 +424,7 @@ class _RequestTile extends StatelessWidget {
                 child: Text(
                   user?.displayName ?? 'Runner',
                   style: const TextStyle(
-                      fontWeight: FontWeight.w600, fontSize: 14),
+                      fontWeight: FontWeight.w600, fontSize: AppTheme.fsBody),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -454,7 +454,7 @@ class _RequestTile extends StatelessWidget {
                 ),
                 child: const Text('Accept',
                     style: TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600)),
+                        fontSize: AppTheme.fsSecondary, fontWeight: FontWeight.w600)),
               ),
               const SizedBox(width: 6),
               IconButton(

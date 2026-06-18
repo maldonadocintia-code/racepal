@@ -252,7 +252,7 @@ class _PlanAddSheetState extends State<_PlanAddSheet> {
           ),
           const SizedBox(height: 14),
           const Text('Add a race',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: AppTheme.fsHeading)),
           const SizedBox(height: 2),
           Row(
             children: [
@@ -262,7 +262,7 @@ class _PlanAddSheetState extends State<_PlanAddSheet> {
               Text(dateLabel,
                   style: const TextStyle(
                       color: AppTheme.accent,
-                      fontSize: 13,
+                      fontSize: AppTheme.fsSecondary,
                       fontWeight: FontWeight.w700)),
             ],
           ),
@@ -346,11 +346,11 @@ class _PlanAddSheetState extends State<_PlanAddSheet> {
         ),
       ),
       title: Text(k.name,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5),
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: AppTheme.fsBody),
           maxLines: 1,
           overflow: TextOverflow.ellipsis),
       subtitle: Text(sub,
-          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12.5),
+          style: const TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsCaption),
           maxLines: 1,
           overflow: TextOverflow.ellipsis),
       trailing: _saving

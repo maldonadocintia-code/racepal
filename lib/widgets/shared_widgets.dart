@@ -137,7 +137,7 @@ class RaceCard extends StatelessWidget {
                     DateFormat('EEE d MMM').format(race.date),
                     style: const TextStyle(
                       color: AppTheme.textSecondary,
-                      fontSize: 12,
+                      fontSize: AppTheme.fsCaption,
                     ),
                   ),
                 ],
@@ -161,7 +161,7 @@ class RaceCard extends StatelessWidget {
                       race.location,
                       style: const TextStyle(
                         color: AppTheme.textSecondary,
-                        fontSize: 13,
+                        fontSize: AppTheme.fsSecondary,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -178,7 +178,7 @@ class RaceCard extends StatelessWidget {
                       '${race.averageRating.toStringAsFixed(1)} (${race.reviewCount})',
                       style: const TextStyle(
                         color: AppTheme.textSecondary,
-                        fontSize: 12,
+                        fontSize: AppTheme.fsCaption,
                       ),
                     ),
                     const Spacer(),
@@ -191,7 +191,7 @@ class RaceCard extends StatelessWidget {
                             '${race.attendeeCount} going',
                             style: const TextStyle(
                               color: AppTheme.textSecondary,
-                              fontSize: 12,
+                              fontSize: AppTheme.fsCaption,
                             ),
                           ),
                         ],
@@ -233,7 +233,7 @@ class RaceCard extends StatelessWidget {
             race.type,
             style: TextStyle(
               color: isParkrun ? AppTheme.primary : AppTheme.accent,
-              fontSize: 12,
+              fontSize: AppTheme.fsCaption,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -289,7 +289,7 @@ class ReviewTile extends StatelessWidget {
                       review.userName,
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                        fontSize: AppTheme.fsBody,
                       ),
                     ),
                     if (review.finishTime != null)
@@ -297,7 +297,7 @@ class ReviewTile extends StatelessWidget {
                         '⏱ ${review.finishTime}',
                         style: const TextStyle(
                           color: AppTheme.textSecondary,
-                          fontSize: 12,
+                          fontSize: AppTheme.fsCaption,
                         ),
                       ),
                   ],
@@ -349,7 +349,7 @@ class ReviewTile extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               review.body!,
-              style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+              style: const TextStyle(color: AppTheme.textPrimary, fontSize: AppTheme.fsBody),
             ),
           ],
         ],

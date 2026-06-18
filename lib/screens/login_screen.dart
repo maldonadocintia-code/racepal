@@ -55,7 +55,7 @@ class LoginScreen extends StatelessWidget {
                 'Your UK running social calendar',
                 style: TextStyle(
                   color: AppTheme.textSecondary,
-                  fontSize: 16,
+                  fontSize: AppTheme.fsTitle,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -77,7 +77,7 @@ class LoginScreen extends StatelessWidget {
                   ),
                   child: Text(
                     'Sign in failed. Please try again.',
-                    style: const TextStyle(color: Colors.red, fontSize: 13),
+                    style: const TextStyle(color: Colors.red, fontSize: AppTheme.fsSecondary),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -117,7 +117,7 @@ class LoginScreen extends StatelessWidget {
                             const Text(
                               'Continue with Google',
                               style: TextStyle(
-                                fontSize: 15,
+                                fontSize: AppTheme.fsBody,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -131,14 +131,14 @@ class LoginScreen extends StatelessWidget {
                   text: 'By continuing you agree to our ',
                   style: const TextStyle(
                     color: AppTheme.textSecondary,
-                    fontSize: 12,
+                    fontSize: AppTheme.fsCaption,
                   ),
                   children: [
                     TextSpan(
                       text: 'Privacy Policy',
                       style: const TextStyle(
                         color: AppTheme.accent,
-                        fontSize: 12,
+                        fontSize: AppTheme.fsCaption,
                         decoration: TextDecoration.underline,
                       ),
                       recognizer: TapGestureRecognizer()
@@ -174,7 +174,7 @@ class LoginScreen extends StatelessWidget {
         const SizedBox(width: 14),
         Text(
           text,
-          style: const TextStyle(color: AppTheme.textPrimary, fontSize: 15),
+          style: const TextStyle(color: AppTheme.textPrimary, fontSize: AppTheme.fsBody),
         ),
       ],
     );

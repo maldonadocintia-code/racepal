@@ -69,7 +69,7 @@ class PalsScreen extends StatelessWidget {
                 const SizedBox(height: 4),
                 const Text(
                   'Find runners and send a pal request.\nWhen they accept, they appear here.',
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
@@ -102,16 +102,16 @@ class _PalTile extends StatelessWidget {
         radius: 24,
       ),
       title: Text(user.displayName,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: AppTheme.fsBody)),
       subtitle: user.bio != null && user.bio!.isNotEmpty
           ? Text(user.bio!,
               style: const TextStyle(
-                  color: AppTheme.textSecondary, fontSize: 13),
+                  color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary),
               maxLines: 1,
               overflow: TextOverflow.ellipsis)
           : Text('${user.racesCount} race${user.racesCount == 1 ? '' : 's'}',
               style: const TextStyle(
-                  color: AppTheme.textSecondary, fontSize: 13)),
+                  color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
       trailing: const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
       onTap: () => Navigator.push(
         context,
@@ -194,7 +194,7 @@ class _FindPalsScreenState extends State<FindPalsScreen> {
             padding: EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             child: Text(
               'Tip: names are matched from the start — try the first few letters.',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsCaption),
             ),
           ),
           Expanded(
@@ -284,11 +284,11 @@ class _FoundUserTileState extends State<_FoundUserTile> {
         radius: 24,
       ),
       title: Text(widget.user.displayName,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: AppTheme.fsBody)),
       subtitle: widget.user.bio != null && widget.user.bio!.isNotEmpty
           ? Text(widget.user.bio!,
               style: const TextStyle(
-                  color: AppTheme.textSecondary, fontSize: 13),
+                  color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary),
               maxLines: 1,
               overflow: TextOverflow.ellipsis)
           : null,

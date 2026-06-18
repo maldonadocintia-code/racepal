@@ -511,7 +511,7 @@ class _MapScreenState extends State<MapScreen> {
                         color: _place == null
                             ? AppTheme.textSecondary
                             : AppTheme.textPrimary,
-                        fontSize: 15,
+                        fontSize: AppTheme.fsBody,
                         fontWeight:
                             _place == null ? FontWeight.normal : FontWeight.w700,
                       ),
@@ -536,7 +536,7 @@ class _MapScreenState extends State<MapScreen> {
               children: [
                 Text('Within ${_radius.round()} miles',
                     style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 13)),
+                        color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
               ],
             ),
             SliderTheme(
@@ -597,7 +597,7 @@ class _MapScreenState extends State<MapScreen> {
         child: Text(label,
             style: TextStyle(
               color: selected ? Colors.white : AppTheme.textSecondary,
-              fontSize: 13,
+              fontSize: AppTheme.fsSecondary,
               fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
             )),
       ),
@@ -628,7 +628,7 @@ class _MapScreenState extends State<MapScreen> {
             Text(_isListView ? 'Map' : 'List',
                 style: const TextStyle(
                     color: AppTheme.primary,
-                    fontSize: 13,
+                    fontSize: AppTheme.fsSecondary,
                     fontWeight: FontWeight.w700)),
           ],
         ),
@@ -687,7 +687,7 @@ class _MapScreenState extends State<MapScreen> {
                           : r.distanceMi!.toStringAsFixed(0),
                       style: const TextStyle(
                           color: AppTheme.accent,
-                          fontSize: 17,
+                          fontSize: AppTheme.fsTitle,
                           fontWeight: FontWeight.w800),
                     ),
                     const Text('miles',
@@ -712,16 +712,16 @@ class _MapScreenState extends State<MapScreen> {
                 children: [
                   Text(r.title,
                       style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 15),
+                          fontWeight: FontWeight.w700, fontSize: AppTheme.fsBody),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 2),
                   Text(r.dateLabel,
                       style: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 12.5)),
+                          color: AppTheme.textSecondary, fontSize: AppTheme.fsCaption)),
                   Text('📍 ${r.address}',
                       style: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 12.5),
+                          color: AppTheme.textSecondary, fontSize: AppTheme.fsCaption),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
                 ],
@@ -732,7 +732,7 @@ class _MapScreenState extends State<MapScreen> {
               Text('★ ${r.rating}',
                   style: const TextStyle(
                       color: AppTheme.accent,
-                      fontSize: 13,
+                      fontSize: AppTheme.fsSecondary,
                       fontWeight: FontWeight.w700)),
             ],
             const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
@@ -846,7 +846,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
           ),
           const SizedBox(height: 14),
           const Text('Search a town, city or area',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: AppTheme.fsTitle)),
           const SizedBox(height: 12),
           TextField(
             controller: _ctrl,
@@ -934,7 +934,7 @@ class _ParkrunPanel extends StatelessWidget {
               style: const TextStyle(
                   color: AppTheme.textPrimary,
                   fontWeight: FontWeight.w800,
-                  fontSize: 20)),
+                  fontSize: AppTheme.fsDisplay)),
           const SizedBox(height: 4),
           _line(Icons.location_on_outlined, data['location'] as String? ?? ''),
           const SizedBox(height: 4),
@@ -1007,7 +1007,7 @@ class _EventPanel extends StatelessWidget {
                         : price.toString(),
                     style: const TextStyle(
                         color: AppTheme.textSecondary,
-                        fontSize: 12,
+                        fontSize: AppTheme.fsCaption,
                         fontWeight: FontWeight.w600)),
               ],
               const Spacer(),
@@ -1023,7 +1023,7 @@ class _EventPanel extends StatelessWidget {
               style: const TextStyle(
                   color: AppTheme.textPrimary,
                   fontWeight: FontWeight.w800,
-                  fontSize: 20),
+                  fontSize: AppTheme.fsDisplay),
               maxLines: 2,
               overflow: TextOverflow.ellipsis),
           const SizedBox(height: 4),
@@ -1104,7 +1104,7 @@ class _RacePanel extends StatelessWidget {
                 _tag(race.type, AppTheme.accent),
                 const SizedBox(width: 8),
                 if (race.lightningBolt)
-                  const Text('⚡', style: TextStyle(fontSize: 16)),
+                  const Text('⚡', style: TextStyle(fontSize: AppTheme.fsTitle)),
                 const Spacer(),
                 IconButton(
                     tooltip: 'Close',
@@ -1118,7 +1118,7 @@ class _RacePanel extends StatelessWidget {
                 style: const TextStyle(
                     color: AppTheme.textPrimary,
                     fontWeight: FontWeight.w800,
-                    fontSize: 20)),
+                    fontSize: AppTheme.fsDisplay)),
             const SizedBox(height: 4),
             _line(Icons.location_on_outlined, race.location),
             const SizedBox(height: 4),
@@ -1129,7 +1129,7 @@ class _RacePanel extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(DateFormat('EEE d MMM yyyy').format(race.date),
                     style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 13)),
+                        color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
                 if (race.reviewCount > 0) ...[
                   const SizedBox(width: 12),
                   const Icon(Icons.star, size: 14, color: AppTheme.accent),
@@ -1137,7 +1137,7 @@ class _RacePanel extends StatelessWidget {
                   Text(
                     '${race.averageRating.toStringAsFixed(1)} (${race.reviewCount})',
                     style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 13),
+                        color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary),
                   ),
                 ],
               ],
@@ -1182,7 +1182,7 @@ Widget _tag(String label, Color color) => Container(
       ),
       child: Text(label,
           style: TextStyle(
-              color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+              color: color, fontSize: AppTheme.fsCaption, fontWeight: FontWeight.w600)),
     );
 
 Widget _line(IconData icon, String text) => Row(
@@ -1192,7 +1192,7 @@ Widget _line(IconData icon, String text) => Row(
         Expanded(
           child: Text(text,
               style:
-                  const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                  const TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary),
               maxLines: 1,
               overflow: TextOverflow.ellipsis),
         ),

@@ -82,7 +82,7 @@ class _ProfileBody extends StatelessWidget {
                   Text(
                     user.displayName,
                     style: const TextStyle(
-                      fontSize: 22,
+                      fontSize: AppTheme.fsDisplay,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -90,7 +90,7 @@ class _ProfileBody extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       user.bio!,
-                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsBody),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -209,7 +209,7 @@ class _ProfileBody extends StatelessWidget {
           'This permanently deletes your profile, photo, reviews, race history, '
           'pals and activity. This cannot be undone.\n\n'
           'You\'ll be asked to sign in again to confirm it\'s you.',
-          style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+          style: TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsBody),
         ),
         actions: [
           TextButton(
@@ -253,13 +253,13 @@ class _ProfileBody extends StatelessWidget {
     children: [
       Text(value,
           style: const TextStyle(
-            fontSize: 20,
+            fontSize: AppTheme.fsDisplay,
             fontWeight: FontWeight.w800,
             color: AppTheme.textPrimary,
           )),
       Text(label,
           style: const TextStyle(
-            fontSize: 12,
+            fontSize: AppTheme.fsCaption,
             color: AppTheme.textSecondary,
           )),
     ],
@@ -399,7 +399,7 @@ class _UserRacesScreen extends StatelessWidget {
         child: Text(t,
             style: const TextStyle(
                 color: AppTheme.textSecondary,
-                fontSize: 12,
+                fontSize: AppTheme.fsCaption,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.8)),
       );
@@ -426,12 +426,12 @@ class _UserRacesScreen extends StatelessWidget {
                   children: [
                     Text(race.name,
                         style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 14)),
+                            fontWeight: FontWeight.w700, fontSize: AppTheme.fsBody)),
                     const SizedBox(height: 2),
                     Text(
                         '${DateFormat('EEE d MMM yyyy').format(race.date)} · ${race.location}',
                         style: const TextStyle(
-                            color: AppTheme.textSecondary, fontSize: 12),
+                            color: AppTheme.textSecondary, fontSize: AppTheme.fsCaption),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis),
                   ],
@@ -443,7 +443,7 @@ class _UserRacesScreen extends StatelessWidget {
                 Text(race.averageRating.toStringAsFixed(1),
                     style: const TextStyle(
                         color: AppTheme.accent,
-                        fontSize: 13,
+                        fontSize: AppTheme.fsSecondary,
                         fontWeight: FontWeight.w700)),
               ],
             ],
@@ -504,7 +504,7 @@ class _UserReviewsScreen extends StatelessWidget {
                         builder: (ctx, rs) => Text(
                           rs.data?.name ?? 'Race',
                           style: const TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: 15),
+                              fontWeight: FontWeight.w700, fontSize: AppTheme.fsBody),
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -513,7 +513,7 @@ class _UserReviewsScreen extends StatelessWidget {
                         const SizedBox(height: 6),
                         Text(rv.body!,
                             style: const TextStyle(
-                                color: AppTheme.textSecondary, fontSize: 13)),
+                                color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
                       ],
                     ],
                   ),

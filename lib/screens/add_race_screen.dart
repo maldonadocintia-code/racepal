@@ -117,7 +117,7 @@ class _ManualRaceFormState extends State<_ManualRaceForm> {
           ),
           const SizedBox(height: 12),
           // Type selector
-          const Text('Race type', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+          const Text('Race type', style: TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -136,7 +136,7 @@ class _ManualRaceFormState extends State<_ManualRaceForm> {
                           t,
                           style: TextStyle(
                             color: _type == t ? Colors.white : AppTheme.textSecondary,
-                            fontSize: 13,
+                            fontSize: AppTheme.fsSecondary,
                           ),
                         ),
                       ),
@@ -344,7 +344,7 @@ class _ParkrunSelectorState extends State<_ParkrunSelector> {
                 ),
                 const SizedBox(height: 4),
                 Text(_selected!['location'].toString(),
-                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
                 const SizedBox(height: 12),
                 GestureDetector(
                   onTap: _pickDate,
@@ -364,7 +364,7 @@ class _ParkrunSelectorState extends State<_ParkrunSelector> {
                               : DateFormat('EEE, d MMMM yyyy').format(_date!),
                           style: TextStyle(
                             color: _date == null ? AppTheme.textSecondary : AppTheme.textPrimary,
-                            fontSize: 13,
+                            fontSize: AppTheme.fsSecondary,
                           ),
                         ),
                       ],
@@ -396,7 +396,7 @@ class _ParkrunSelectorState extends State<_ParkrunSelector> {
                 leading: const Icon(Icons.bolt, color: AppTheme.primary, size: 20),
                 title: Text('${p['name']} parkrun'),
                 subtitle: Text(p['location'].toString(),
-                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsCaption)),
                 onTap: () => setState(() => _selected = p),
                 selected: _selected?['id'] == p['id'],
                 selectedTileColor: AppTheme.primary.withValues(alpha: 0.08),
