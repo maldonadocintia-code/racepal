@@ -783,30 +783,15 @@ class _ReviewSheetState extends State<ReviewSheet> {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              const Text('Visible to:', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-              const SizedBox(width: 12),
-              GestureDetector(
-                onTap: () => setState(() => _isPublic = true),
-                child: Row(
-                  children: [
-                    Radio<bool>(value: true, groupValue: _isPublic, onChanged: (v) => setState(() => _isPublic = v!)),
-                    const Text('Everyone', style: TextStyle(fontSize: 13)),
-                  ],
-                ),
-              ),
-              GestureDetector(
-                onTap: () => setState(() => _isPublic = false),
-                child: Row(
-                  children: [
-                    Radio<bool>(value: false, groupValue: _isPublic, onChanged: (v) => setState(() => _isPublic = v!)),
-                    const Text('Pals only', style: TextStyle(fontSize: 13)),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          const Text('Who can see this review?',
+              style: TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: AppTheme.fsSecondary)),
+          const SizedBox(height: 4),
+          _visibilityOption(
+              true, 'Everyone on RacePals', 'Any RacePals user can see it'),
+          _visibilityOption(
+              false, 'Pals only', 'Only your pals can see it'),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
@@ -820,6 +805,34 @@ class _ReviewSheetState extends State<ReviewSheet> {
           const SizedBox(height: 20),
         ],
         ),
+      ),
+    );
+  }
+
+  Widget _visibilityOption(bool value, String title, String subtitle) {
+    return InkWell(
+      onTap: () => setState(() => _isPublic = value),
+      borderRadius: BorderRadius.circular(8),
+      child: Row(
+        children: [
+          Radio<bool>(
+            value: value,
+            groupValue: _isPublic,
+            onChanged: (v) => setState(() => _isPublic = v!),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontSize: AppTheme.fsBody)),
+                Text(subtitle,
+                    style: const TextStyle(
+                        fontSize: AppTheme.fsCaption,
+                        color: AppTheme.textSecondary)),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
