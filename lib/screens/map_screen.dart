@@ -10,6 +10,7 @@ import '../models/review_model.dart';
 import '../services/app_provider.dart';
 import '../services/places_service.dart';
 import '../utils/geo.dart';
+import '../utils/distance.dart';
 import '../widgets/parkrun_helpers.dart';
 import '../theme.dart';
 import 'race_detail_screen.dart';
@@ -35,7 +36,13 @@ class _MapScreenState extends State<MapScreen> {
   double _radius = 10;
 
   _Seg _seg = _Seg.all;
+  DistanceBucket? _dist; // null = Any
   bool _isListView = true; // list is the default — faster, no map-tile cost
+
+  // Parkruns are all 5K. When true the distance filter treats them as 5K (so
+  // choosing 10K/Half/etc. hides them); when false parkruns always show
+  // regardless of the chosen distance. Single switch — flip if testers prefer.
+  static const bool _distAppliesToParkruns = true;
 
   bool _parkrunsLoaded = false;
   bool _eventsLoaded = false;
@@ -144,6 +151,14 @@ class _MapScreenState extends State<MapScreen> {
       return true;
     }
 
+    // Distance filter. Parkruns are 5K; whether the filter applies to them is
+    // controlled by _distAppliesToParkruns.
+    bool keepDist(Set<DistanceBucket> buckets, bool isParkrun) {
+      if (_dist == null) return true;
+      if (isParkrun && !_distAppliesToParkruns) return true;
+      return buckets.contains(_dist);
+    }
+
     if (_seg != _Seg.races) {
       for (final p in _parkrunData) {
         final lat = (p['lat'] as num?)?.toDouble();
@@ -152,7 +167,8 @@ class _MapScreenState extends State<MapScreen> {
         final dist = _distOf(lat, lng);
         final title = '${p['name']} parkrun';
         final address = (p['location'] ?? '') as String;
-        if (!keep(dist)) continue;
+        const buckets = {DistanceBucket.fiveK};
+        if (!keep(dist) || !keepDist(buckets, true)) continue;
         res.add(_Result(
           markerKey: 'pr_${p['id']}',
           lat: lat,
@@ -164,6 +180,8 @@ class _MapScreenState extends State<MapScreen> {
           address: address,
           dateLabel: 'Saturdays · 9:00am',
           rating: ratingFor('pr_${p['id']}'),
+          distLabel: '5K',
+          buckets: buckets,
           onSelect: () => setState(() {
             _selectedParkrun = p;
             _selectedEvent = null;
@@ -183,7 +201,9 @@ class _MapScreenState extends State<MapScreen> {
         final dist = _distOf(lat, lng);
         final title = (e['name'] ?? '') as String;
         final address = (e['address'] ?? e['city'] ?? '') as String;
-        if (!keep(dist)) continue;
+        final distRaw = e['distance'] as String?;
+        final buckets = bucketsFor(distRaw);
+        if (!keep(dist) || !keepDist(buckets, false)) continue;
         final url = e['url'] as String?;
         res.add(_Result(
           markerKey: 'fa_${e['url']}',
@@ -196,6 +216,8 @@ class _MapScreenState extends State<MapScreen> {
           address: address,
           dateLabel: DateFormat('EEE d MMM yyyy').format(d),
           rating: url != null ? ratingFor('fa_${url.split('/').last}') : null,
+          distLabel: distRaw,
+          buckets: buckets,
           onSelect: () => setState(() {
             _selectedEvent = e;
             _selectedParkrun = null;
@@ -215,7 +237,8 @@ class _MapScreenState extends State<MapScreen> {
           continue;
         }
         final dist = _distOf(r.lat, r.lng);
-        if (!keep(dist)) continue;
+        final buckets = bucketsFor(r.type);
+        if (!keep(dist) || !keepDist(buckets, false)) continue;
         res.add(_Result(
           markerKey: 'race_${r.id}',
           lat: r.lat!,
@@ -229,6 +252,8 @@ class _MapScreenState extends State<MapScreen> {
           rating: r.reviewCount > 0
               ? '${r.averageRating.toStringAsFixed(1)} (${r.reviewCount})'
               : null,
+          distLabel: r.type,
+          buckets: buckets,
           onSelect: () => setState(() {
             _selectedRace = r;
             _selectedParkrun = null;
@@ -488,6 +513,7 @@ class _MapScreenState extends State<MapScreen> {
 
   Widget _header() {
     final c = AppColors.of(context);
+    final activeCount = _activeFilterCount();
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       decoration: BoxDecoration(
@@ -495,105 +521,340 @@ class _MapScreenState extends State<MapScreen> {
       ),
       child: Column(
         children: [
-          // Location search bar
-          GestureDetector(
-            onTap: _openLocationPicker,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: c.searchBg,
-                borderRadius: BorderRadius.circular(AppRadius.xl),
-                border: Border.all(color: c.searchBorder),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.location_on_outlined, color: c.primary, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _place?.name ?? 'Search a town, city or area',
-                      style: TextStyle(
-                        fontFamily: AppType.body,
-                        color: _place == null
-                            ? c.searchPlaceholder
-                            : c.searchText,
-                        fontSize: AppType.md,
-                        fontWeight:
-                            _place == null ? FontWeight.normal : FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  if (_place != null)
-                    GestureDetector(
-                      onTap: _clearPlace,
-                      child: Icon(Icons.close, size: 18, color: c.searchIcon),
-                    )
-                  else
-                    Icon(Icons.search, color: c.searchIcon),
-                ],
-              ),
-            ),
-          ),
-          // Radius slider — only relevant once a place is chosen
-          if (_place != null) ...[
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Text('Within ${_radius.round()} miles',
-                    style: TextStyle(
-                        color: c.textSecondary, fontSize: AppType.sm)),
-              ],
-            ),
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                trackHeight: 4,
-                overlayShape:
-                    const RoundSliderOverlayShape(overlayRadius: 16),
-              ),
-              child: Slider(
-                min: 1,
-                max: 50,
-                divisions: 49,
-                value: _radius,
-                label: '${_radius.round()} mi',
-                activeColor: c.sliderFill,
-                inactiveColor: c.sliderTrack,
-                onChanged: (v) => setState(() => _radius = v),
-                onChangeEnd: (v) {
-                  _rebuild();
-                  _moveCamera();
-                },
-              ),
-            ),
-          ] else
-            const SizedBox(height: 8),
-          // Segment + view toggle
           Row(
             children: [
-              _segChip('All', _Seg.all),
+              // Location pill (tap to pick a place)
+              Expanded(
+                child: GestureDetector(
+                  onTap: _openLocationPicker,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                    decoration: BoxDecoration(
+                      color: c.searchBg,
+                      borderRadius: BorderRadius.circular(AppRadius.full),
+                      border: Border.all(color: c.searchBorder),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.location_on_outlined,
+                            color: c.primary, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _place?.name ?? 'Search a town, city or area',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: AppType.body,
+                              color: _place == null
+                                  ? c.searchPlaceholder
+                                  : c.searchText,
+                              fontSize: AppType.md,
+                              fontWeight: _place == null
+                                  ? FontWeight.normal
+                                  : FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        if (_place != null)
+                          GestureDetector(
+                            onTap: _clearPlace,
+                            child: Icon(Icons.close,
+                                size: 18, color: c.searchIcon),
+                          )
+                        else
+                          Icon(Icons.search, color: c.searchIcon, size: 20),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
               const SizedBox(width: 8),
-              _segChip('Parkruns', _Seg.parkruns),
+              _filtersButton(activeCount),
               const SizedBox(width: 8),
-              _segChip('Races', _Seg.races),
-              const Spacer(),
               _viewToggle(),
             ],
+          ),
+          if (activeCount > 0) ...[
+            const SizedBox(height: 8),
+            _activeStrip(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  int _activeFilterCount() =>
+      (_seg != _Seg.all ? 1 : 0) + (_dist != null ? 1 : 0);
+
+  Widget _filtersButton(int count) {
+    final c = AppColors.of(context);
+    final on = count > 0;
+    return GestureDetector(
+      onTap: _openFilterSheet,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        decoration: BoxDecoration(
+          color: on ? c.filterActive : c.filterInactive,
+          borderRadius: BorderRadius.circular(AppRadius.full),
+          border: Border.all(color: on ? Colors.transparent : c.filterBorder),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.tune,
+                size: 16, color: on ? c.filterActiveText : c.textPrimary),
+            const SizedBox(width: 5),
+            Text(on ? 'Filters · $count' : 'Filters',
+                style: TextStyle(
+                    fontFamily: AppType.body,
+                    color: on ? c.filterActiveText : c.textPrimary,
+                    fontSize: AppType.sm,
+                    fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Removable chips for the filters currently applied (type + distance).
+  Widget _activeStrip() {
+    final chips = <Widget>[];
+    if (_seg != _Seg.all) {
+      chips.add(_removableChip(
+        _seg == _Seg.parkruns ? 'Parkruns' : 'Races',
+        () {
+          setState(() => _seg = _Seg.all);
+          _rebuild();
+        },
+      ));
+    }
+    if (_dist != null) {
+      chips.add(_removableChip(_dist!.label, () {
+        setState(() => _dist = null);
+        _rebuild();
+      }));
+    }
+    return SizedBox(
+      height: 36,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: chips.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, i) => chips[i],
+      ),
+    );
+  }
+
+  Widget _removableChip(String label, VoidCallback onClear) {
+    final c = AppColors.of(context);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+      decoration: BoxDecoration(
+        color: c.primaryMuted,
+        borderRadius: BorderRadius.circular(AppRadius.full),
+        border: Border.all(color: c.primary.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label,
+              style: TextStyle(
+                  fontFamily: AppType.body,
+                  color: c.textLink,
+                  fontSize: AppType.sm,
+                  fontWeight: FontWeight.w600)),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: onClear,
+            child: Icon(Icons.close, size: 16, color: c.textLink),
           ),
         ],
       ),
     );
   }
 
-  Widget _segChip(String label, _Seg value) {
-    final c = AppColors.of(context);
-    final selected = _seg == value;
-    return GestureDetector(
-      onTap: () {
-        setState(() => _seg = value);
-        _rebuild();
+  // ── Filter bottom sheet (Radius / Type / Distance) ──────────────────────────
+
+  Future<void> _openFilterSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.of(context).sheetBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
+      ),
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (sheetCtx, setSheet) {
+            final c = AppColors.of(context);
+            final count = _buildResults().length;
+            // Apply a change: refresh the list/markers behind the sheet AND the
+            // sheet's own chips/count.
+            void apply() {
+              _rebuild();
+              setSheet(() {});
+            }
+
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                  18, 14, 18, MediaQuery.of(sheetCtx).padding.bottom + 18),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: c.sheetHandle,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Text('Filters',
+                            style: TextStyle(
+                                fontFamily: AppType.heading,
+                                color: c.textPrimary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: AppType.xl)),
+                        const Spacer(),
+                        if (_activeFilterCount() > 0)
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _seg = _Seg.all;
+                                _dist = null;
+                              });
+                              apply();
+                            },
+                            child: Text('Reset',
+                                style: TextStyle(
+                                    color: c.textSecondary,
+                                    fontSize: AppType.base,
+                                    fontWeight: FontWeight.w600)),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _sheetLabel(c, 'Radius'),
+                    if (_place != null) ...[
+                      Text('Within ${_radius.round()} miles of ${_place!.name}',
+                          style: TextStyle(
+                              color: c.textSecondary, fontSize: AppType.sm)),
+                      SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          trackHeight: 4,
+                          overlayShape: const RoundSliderOverlayShape(
+                              overlayRadius: 16),
+                        ),
+                        child: Slider(
+                          min: 1,
+                          max: 50,
+                          divisions: 49,
+                          value: _radius,
+                          label: '${_radius.round()} mi',
+                          activeColor: c.sliderFill,
+                          inactiveColor: c.sliderTrack,
+                          onChanged: (v) {
+                            setState(() => _radius = v);
+                            setSheet(() {});
+                          },
+                          onChangeEnd: (v) {
+                            _rebuild();
+                            _moveCamera();
+                            setSheet(() {});
+                          },
+                        ),
+                      ),
+                    ] else
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Text(
+                            'Set a location above to filter by distance from it.',
+                            style: TextStyle(
+                                color: c.textTertiary, fontSize: AppType.sm)),
+                      ),
+                    const SizedBox(height: 12),
+                    _sheetLabel(c, 'Type'),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _sheetChip('All', _seg == _Seg.all, () {
+                          setState(() => _seg = _Seg.all);
+                          apply();
+                        }),
+                        _sheetChip('Parkruns', _seg == _Seg.parkruns, () {
+                          setState(() => _seg = _Seg.parkruns);
+                          apply();
+                        }),
+                        _sheetChip('Races', _seg == _Seg.races, () {
+                          setState(() => _seg = _Seg.races);
+                          apply();
+                        }),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _sheetLabel(c, 'Distance'),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _sheetChip('Any', _dist == null, () {
+                          setState(() => _dist = null);
+                          apply();
+                        }),
+                        for (final b in kDistanceBuckets)
+                          _sheetChip(b.label, _dist == b, () {
+                            setState(() => _dist = b);
+                            apply();
+                          }),
+                      ],
+                    ),
+                    const SizedBox(height: 22),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(sheetCtx),
+                        child: Text(count > 0
+                            ? 'Show $count result${count == 1 ? '' : 's'}'
+                            : 'No matches — adjust filters'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
       },
+    );
+  }
+
+  Widget _sheetLabel(AppColors c, String t) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(t.toUpperCase(),
+            style: TextStyle(
+                color: c.textTertiary,
+                fontSize: AppType.xs,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.8)),
+      );
+
+  Widget _sheetChip(String label, bool selected, VoidCallback onTap) {
+    final c = AppColors.of(context);
+    return GestureDetector(
+      onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
         decoration: BoxDecoration(
           color: selected ? c.filterActive : c.filterInactive,
           borderRadius: BorderRadius.circular(AppRadius.full),
@@ -605,7 +866,7 @@ class _MapScreenState extends State<MapScreen> {
               fontFamily: AppType.body,
               color: selected ? c.filterActiveText : c.filterInactiveText,
               fontSize: AppType.base,
-              fontWeight: selected ? FontWeight.w500 : FontWeight.normal,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
             )),
       ),
     );
@@ -654,9 +915,11 @@ class _MapScreenState extends State<MapScreen> {
         alignment: Alignment.topCenter,
         padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
         child: Text(
-          _place != null
-              ? 'Nothing within ${_radius.round()} miles of ${_place!.name}.\nTry a bigger radius.'
-              : 'No upcoming races or parkruns found.',
+          _activeFilterCount() > 0
+              ? 'Nothing matches your filters.\nTry “Any” distance, “All” types, or a bigger radius.'
+              : _place != null
+                  ? 'Nothing within ${_radius.round()} miles of ${_place!.name}.\nTry a bigger radius.'
+                  : 'No upcoming races or parkruns found.',
           textAlign: TextAlign.center,
           style: TextStyle(color: c.textSecondary),
         ),
@@ -734,11 +997,19 @@ class _MapScreenState extends State<MapScreen> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 2),
-                  Text(r.dateLabel,
-                      style: TextStyle(
-                          fontFamily: AppType.body,
-                          color: c.textSecondary,
-                          fontSize: AppType.sm)),
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      Text(r.dateLabel,
+                          style: TextStyle(
+                              fontFamily: AppType.body,
+                              color: c.textSecondary,
+                              fontSize: AppType.sm)),
+                      _distBadge(c, r),
+                    ],
+                  ),
                   Text('📍 ${r.address}',
                       style: TextStyle(
                           fontFamily: AppType.body,
@@ -762,6 +1033,29 @@ class _MapScreenState extends State<MapScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  // Small distance tag on a result tile (e.g. "5K", "5K / 10K", "Half").
+  // Green for parkruns, secondary/cyan for races — matches the panel tags.
+  Widget _distBadge(AppColors c, _Result r) {
+    final label = r.distLabel;
+    if (label == null || label.isEmpty) return const SizedBox.shrink();
+    final color = r.isParkrun ? AppPalette.goGreen : c.secondary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Text(label,
+          style: TextStyle(
+              fontFamily: AppType.display,
+              color: color,
+              fontSize: AppType.sm,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.3)),
     );
   }
 
@@ -803,6 +1097,8 @@ class _Result {
   final String address;
   final String dateLabel;
   final String? rating;
+  final String? distLabel; // raw distance shown on the tile, e.g. "5K / 10K"
+  final Set<DistanceBucket> buckets; // distances this event offers
   final VoidCallback onSelect;
 
   _Result({
@@ -816,6 +1112,8 @@ class _Result {
     required this.address,
     required this.dateLabel,
     required this.rating,
+    this.distLabel,
+    this.buckets = const {},
     required this.onSelect,
   });
 }
