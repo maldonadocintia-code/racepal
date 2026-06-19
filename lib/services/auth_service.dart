@@ -113,6 +113,16 @@ class AuthService {
     await _deleteByQuery(_db
         .collection(AppConstants.palRequestsCol)
         .where('toUid', isEqualTo: uid));
+    // Legacy follows (both directions). These are read-only except for the
+    // one-off pals migration — but if they survive deletion, signing in again
+    // re-runs the migration on a fresh profile doc and resurrects the old
+    // connections as pals. Clearing them keeps a re-signup truly empty.
+    await _deleteByQuery(_db
+        .collection(AppConstants.followsCol)
+        .where('followerUid', isEqualTo: uid));
+    await _deleteByQuery(_db
+        .collection(AppConstants.followsCol)
+        .where('followingUid', isEqualTo: uid));
     // Profile photo (may not exist — ignore a missing-object error).
     try {
       await FirebaseStorage.instance

@@ -313,21 +313,34 @@ class _AttendanceRowState extends State<_AttendanceRow> {
     // Parkruns plan a specific Saturday (per-date) rather than a one-off
     // Going/Attended on the venue doc — keeps the calendar accurate.
     if (widget.race.isParkrun) {
+      // If the user already planned this specific Saturday (a per-date doc they
+      // marked "going"), let them back out — "can't make it / changed my mind".
+      // The generic venue doc instead offers "Plan a date".
+      final planned = _attendance?.status == AttendanceStatus.going;
       return Row(
         children: [
-          _btn(
-            label: 'Plan a date',
-            icon: Icons.event_available_outlined,
-            active: false,
-            onTap: () => planParkrunDate(
-              context,
-              venueId: widget.race.id,
-              name: widget.race.name,
-              location: widget.race.location,
-              lat: widget.race.lat,
-              lng: widget.race.lng,
+          if (planned)
+            _btn(
+              label: 'Not going',
+              icon: Icons.cancel_outlined,
+              active: false,
+              onTap: _remove,
+              danger: true,
+            )
+          else
+            _btn(
+              label: 'Plan a date',
+              icon: Icons.event_available_outlined,
+              active: false,
+              onTap: () => planParkrunDate(
+                context,
+                venueId: widget.race.id,
+                name: widget.race.name,
+                location: widget.race.location,
+                lat: widget.race.lat,
+                lng: widget.race.lng,
+              ),
             ),
-          ),
           const SizedBox(width: 10),
           _btn(
             label: 'Review',

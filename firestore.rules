@@ -98,9 +98,15 @@ service cloud.firestore {
     }
 
     // ── Legacy follows (read-only, for the one-off migration to Pals) ───────────
+    // Delete is allowed for either party so account deletion can purge a user's
+    // legacy follows — otherwise they'd be re-migrated into pals on re-signup.
     match /follows/{docId} {
       allow read: if isSignedIn();
-      allow write: if false;
+      allow create, update: if false;
+      allow delete: if isSignedIn() && (
+        request.auth.uid == resource.data.followerUid ||
+        request.auth.uid == resource.data.followingUid
+      );
     }
     match /follow_requests/{docId} {
       allow read: if isSignedIn();

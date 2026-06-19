@@ -430,6 +430,9 @@ class _MonthCalendarState extends State<_MonthCalendar> {
           focusedDay: _focusedDay,
           selectedDayPredicate: (d) => isSameDay(d, _selectedDay),
           startingDayOfWeek: StartingDayOfWeek.monday,
+          // Default is 16px, which clips the weekday labels (Mon/Tue/…) with the
+          // taller bundled fonts — give the header row room to show in full.
+          daysOfWeekHeight: 24,
           eventLoader: (day) =>
               events[DateTime(day.year, day.month, day.day)] ?? [],
           calendarBuilders: CalendarBuilders(
