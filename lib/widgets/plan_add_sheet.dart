@@ -109,7 +109,9 @@ class _PlanAddSheetState extends State<_PlanAddSheet> {
               kind: _Kind.parkrun,
               name: '${p['name']} parkrun',
               location: (p['location'] ?? '') as String,
-              raw: p,
+              // Bundled venues carry their venueId so _add builds the same
+              // per-date id whether the parkrun is bundled or user-created.
+              raw: {...p, 'venueId': 'pr_${p['id']}'},
             ));
 
     final eventsList =
@@ -149,9 +151,26 @@ class _PlanAddSheetState extends State<_PlanAddSheet> {
       // Network/permission hiccup — fall back to the bundled catalog only.
     }
 
+    // User-created parkrun venues, so a parkrun one runner adds is selectable
+    // by everyone — same pick-the-Saturday flow as a bundled parkrun.
+    List<_Known> userParkruns = const [];
+    try {
+      final venues = await provider.raceService.parkrunVenues();
+      userParkruns = venues
+          .map((v) => _Known(
+                kind: _Kind.parkrun,
+                name: '${v['name']} parkrun',
+                location: (v['location'] ?? '') as String,
+                raw: v, // already carries venueId, lat, lng
+              ))
+          .toList();
+    } catch (_) {
+      // Network/permission hiccup — bundled parkruns only.
+    }
+
     if (!mounted) return;
     setState(() {
-      _all = [...community, ...parkruns, ...events];
+      _all = [...community, ...userParkruns, ...parkruns, ...events];
       _loaded = true;
     });
   }
@@ -176,7 +195,7 @@ class _PlanAddSheetState extends State<_PlanAddSheet> {
     switch (k.kind) {
       case _Kind.parkrun:
         // Added on the tapped date — tapping a day is how you pick the Saturday.
-        final venueId = 'pr_${k.raw!['id']}';
+        final venueId = k.raw!['venueId'] as String;
         final id = '${venueId}_${DateFormat('yyyyMMdd').format(widget.date)}';
         race = Race(
           id: id,

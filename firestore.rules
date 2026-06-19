@@ -44,6 +44,18 @@ service cloud.firestore {
       allow delete: if isSignedIn() && resource.data.createdBy == request.auth.uid;
     }
 
+    // ── Parkrun venues ────────────────────────────────────────────────────────
+    // User-created parkruns that aren't in the bundled catalog. Anyone signed-in
+    // can read them (so they show up in everyone's parkrun picker); only the
+    // creator can edit or remove their own venue.
+    match /parkrunVenues/{venueId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() &&
+        request.auth.uid == request.resource.data.createdBy;
+      allow update, delete: if isSignedIn() &&
+        resource.data.createdBy == request.auth.uid;
+    }
+
     // ── Attendances ───────────────────────────────────────────────────────────
     match /attendances/{docId} {
       allow read: if isSignedIn();

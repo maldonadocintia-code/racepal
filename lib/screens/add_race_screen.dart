@@ -279,12 +279,24 @@ class _ParkrunSelectorState extends State<_ParkrunSelector> {
   }
 
   Future<void> _load() async {
+    final provider = context.read<AppProvider>();
     final str = await rootBundle.loadString('assets/parkruns_uk.json');
-    final list = (jsonDecode(str) as List).cast<Map<String, dynamic>>();
+    final bundled = (jsonDecode(str) as List).cast<Map<String, dynamic>>();
+    // User-created parkruns (from Firestore) sit above the bundled catalog so a
+    // venue you just added is right at the top of the list.
+    List<Map<String, dynamic>> venues = const [];
+    try {
+      venues = await provider.raceService.parkrunVenues();
+    } catch (_) {
+      // Offline / permission hiccup — fall back to the bundled catalog only.
+    }
+    if (!mounted) return;
+    final all = [...venues, ...bundled];
     setState(() {
-      _parkruns = list;
-      _filtered = list;
+      _parkruns = all;
+      _filtered = all;
     });
+    _filter(); // re-apply any active search query against the merged list
   }
 
   void _filter() {
@@ -410,8 +422,28 @@ class _ParkrunSelectorState extends State<_ParkrunSelector> {
             },
           ),
         ),
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: TextButton.icon(
+              onPressed: _addManually,
+              icon: const Icon(Icons.add_location_alt_outlined, size: 18),
+              label: const Text("Can't find your parkrun? Add it manually"),
+            ),
+          ),
+        ),
       ],
     );
+  }
+
+  /// Opens the manual parkrun form. When it returns, reload so a just-created
+  /// venue shows up in the list.
+  Future<void> _addManually() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const _ManualParkrunScreen()),
+    );
+    if (mounted) _load();
   }
 
   Future<void> _pickDate() async {
@@ -434,5 +466,164 @@ class _ParkrunSelectorState extends State<_ParkrunSelector> {
     final race = Race.fromParkrunJson(_selected!, _date!);
     await provider.addRace(race);
     if (mounted) Navigator.pop(context);
+  }
+}
+
+/// Form for adding a parkrun that isn't in the bundled catalog. It creates a
+/// *venue* (no date) so it becomes selectable by every user from the parkrun
+/// list; choosing which Saturday to run happens later via the normal picker.
+class _ManualParkrunScreen extends StatelessWidget {
+  const _ManualParkrunScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Add a parkrun')),
+      body: const _ManualParkrunForm(),
+    );
+  }
+}
+
+class _ManualParkrunForm extends StatefulWidget {
+  const _ManualParkrunForm();
+
+  @override
+  State<_ManualParkrunForm> createState() => _ManualParkrunFormState();
+}
+
+class _ManualParkrunFormState extends State<_ManualParkrunForm> {
+  final _nameCtrl = TextEditingController();
+  final _locationCtrl = TextEditingController();
+  final _websiteCtrl = TextEditingController();
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _locationCtrl.dispose();
+    _websiteCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: c.primaryMuted,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 18, color: c.textSecondary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Adds a new parkrun everyone can find in the list. '
+                    'Pick which Saturday to run it afterwards.',
+                    style:
+                        TextStyle(color: c.textSecondary, fontSize: AppType.sm),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _nameCtrl,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(
+              labelText: 'Parkrun name *',
+              hintText: 'e.g. Heaton',
+              helperText: "We'll add “parkrun” for you",
+              prefixIcon: Icon(Icons.directions_run),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _locationCtrl,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(
+              labelText: 'Location *',
+              hintText: 'Town, County',
+              prefixIcon: Icon(Icons.location_on_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _websiteCtrl,
+            keyboardType: TextInputType.url,
+            decoration: const InputDecoration(
+              labelText: 'Website (optional)',
+              prefixIcon: Icon(Icons.link),
+            ),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _saving ? null : _submit,
+              child: _saving
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Create parkrun'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
+    final name = _nameCtrl.text.trim();
+    final location = _locationCtrl.text.trim();
+    if (name.isEmpty || location.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add a name and location')),
+      );
+      return;
+    }
+    // Store the bare name (no "parkrun" suffix) so it renders consistently with
+    // the bundled catalog, which appends "parkrun" in the UI.
+    final bare =
+        name.replaceAll(RegExp(r'\s*parkrun\s*$', caseSensitive: false), '').trim();
+    if (bare.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter the parkrun name')),
+      );
+      return;
+    }
+
+    setState(() => _saving = true);
+    final provider = context.read<AppProvider>();
+    final website = _websiteCtrl.text.trim();
+    try {
+      await provider.raceService.addParkrunVenue(
+        name: bare,
+        location: location,
+        createdBy: provider.currentUser!.uid,
+        website: website.isNotEmpty ? website : null,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Couldn't save — please try again")),
+      );
+      return;
+    }
+    if (!mounted) return;
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$bare parkrun added — now pick a Saturday')),
+    );
   }
 }

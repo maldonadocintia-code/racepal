@@ -14,7 +14,7 @@ Also read: `BACKLOG.md` (outstanding work), `PROJECT_INSTRUCTIONS.md` (how to wo
 - App display name: **RacePals** (renamed v0.2.13). **Package id, repo and Firebase project keep the old `racepal` name** — only the user-facing name changed.
 - GitHub: https://github.com/maldonadocintia-code/racepal (public)
 - Latest release: https://github.com/maldonadocintia-code/racepal/releases/latest
-- Current released version: **v0.2.22-beta** (pubspec `0.2.22+23`) — Plan add-sheet: a fixed-date race is only addable on the calendar day it takes place (mismatched races shown disabled with a hint). Volt & Velocity rebrand shipped in v0.2.20 (see "Design system" section).
+- Current released version: **v0.2.23-beta** (pubspec `0.2.23+24`) — user-created parkrun venues (add a parkrun that isn't in the bundled list) + AAA rating/achievement pink in both themes. Volt & Velocity rebrand shipped in v0.2.20 (see "Design system" section).
 - Firebase project: **racepal-ae334**
 
 ---
@@ -192,7 +192,7 @@ follows/, follow_requests/          # LEGACY — read-only (migration source onl
 - **pals**: read if signed-in; create/delete if you're either party in the doc (`ownerUid` or `otherUid`).
 - **pal_requests**: read if signed-in and you're `fromUid`/`toUid` (with `resource == null ||` guard for status checks); create if `fromUid == you`; delete if you're either party.
 - **follows / follow_requests**: read-only (`allow write: if false`) — kept for migration.
-- Deploy: `firebase deploy --only firestore:rules --project racepal-ae334` (a **production action** — confirm with the user first).
+- Deploy: `firebase deploy --only firestore:rules` (a **production action** — confirm with the user first). Project is pinned in `.firebaserc` (`racepal-ae334`), so no `--project` flag is needed. **Deploy whenever `firestore.rules` changes** — it's part of the release checklist (see Dev Commands), since dependent client code breaks until the rules are live.
 
 **GOTCHA:** never batch-delete a doc that may not exist when its delete rule reads `resource.data.*` — a null `resource` errors and **denies the whole batch**. This caused the v0.2.13 accept-pal crash. See memory `project_firestore_batch_delete_gotcha`.
 
@@ -215,6 +215,7 @@ Goal: ship to the **Play Store closed-testing** track for feedback. See **`PLAY_
 
 ## Release history (recent)
 
+- **v0.2.23** — Two things: (1) **User-created parkrun venues** — if a parkrun isn't in `parkruns_uk.json`, "Add it manually" under the parkrun picker creates a shared *venue* (no date) in the new `parkrunVenues` collection; all users see it merged into both parkrun pickers (`add_race_screen.dart`, `plan_add_sheet.dart`) and pick their own Saturday. `RaceService.addParkrunVenue`/`parkrunVenues`; venue ids `prv_<docId>`, per-date races `prv_<docId>_<yyyyMMdd>`. **Requires the new `parkrunVenues` Firestore rule deployed** to function. Not yet on the Explore map (manual form collects no lat/lng). (2) **AAA rating/achievement pink** in both themes — dark `#FF3CAC`→`#FF8AD0` (7.6:1), light `#C0006A`→`#A8005C` (7.45:1).
 - **v0.2.22** — **Date-locked race adds.** In the Plan tap-a-date sheet (`plan_add_sheet.dart`), a fixed-date race (bundled *or* community) can now only be added on the calendar day it actually takes place — new `_Known.addableOn(tapped)` (parkruns always addable; they take the tapped Saturday). Mismatched races stay visible but **disabled**, with the subtitle replaced by "Only addable on \<date>" + a busy icon. `_add()` also guards on `addableOn`. Explore → "Going" deliberately left unrestricted so future races can still be planned ahead.
 - **v0.2.21** — Three fixes: (1) **planned parkruns can be cancelled** — a per-date parkrun doc the user marked "going" now shows a red **Not going** button in `RaceDetailScreen` (the `isParkrun` branch previously only offered "Plan a date"/"Review"); (2) **calendar weekday labels** no longer clipped (`daysOfWeekHeight: 24` on `TableCalendar`); (3) **account deletion now purges legacy `follows`** in both directions — otherwise re-signup re-ran the Pals migration and resurrected old connections. Firestore `follows` rule now allows either party to `delete` (create/update still locked); rules deployed.
 - **v0.2.20** — **Volt & Velocity design system**: full rebrand (volt-green on midnight) + **light & dark themes** with a System/Light/Dark selector (Me → Appearance, persisted). Bundled Barlow Condensed + Space Grotesk fonts. New `AppColors`/`AppType`/`AppSpacing`/`AppRadius` tokens; all screens converted. (See "Design system" section.)
@@ -241,8 +242,9 @@ flutter build apk --release --split-per-abi
 # Analyze
 flutter analyze lib/
 
-# Deploy Firestore rules (production — confirm first)
-firebase deploy --only firestore:rules --project racepal-ae334
+# Deploy Firestore rules (production — confirm first).
+# Project is pinned in .firebaserc, so no --project flag is needed.
+firebase deploy --only firestore:rules
 
 # Publish a GitHub Release (gh CLI authed as maldonadocintia-code)
 gh release create v0.2.x-beta "build/app/outputs/flutter-apk/app-arm64-v8a-release.apk#RacePals-v0.2.x-beta-arm64.apk" --title "v0.2.x-beta" --notes-file <file> --latest
@@ -250,6 +252,8 @@ gh release create v0.2.x-beta "build/app/outputs/flutter-apk/app-arm64-v8a-relea
 ```
 
 > Releases are done **by the agent via `gh`**, not manual upload. Bump `version:` in `pubspec.yaml` (e.g. `0.2.15+16`) and commit before building. Direct push to `master` needs the user's OK (the harness prompts).
+>
+> **Release checklist — don't skip:** if `firestore.rules` (or `storage.rules`) changed since the last release, **deploy them** (`firebase deploy --only firestore:rules`) — client code that depends on new rules breaks in production until you do. The project is pinned in `.firebaserc` so the bare command targets `racepal-ae334`.
 
 ---
 
@@ -258,7 +262,8 @@ gh release create v0.2.x-beta "build/app/outputs/flutter-apk/app-arm64-v8a-relea
 - **Pals = explicit symmetric friendship** (`pals/{a}_{b}` mirrored docs), not derived from follows any more.
 - **Batch-delete of a non-existent doc denies the whole batch** when the rule reads `resource.data` (see above).
 - **`ensureRace()`** — creates a Firestore race doc on demand with a deterministic id when a user adds a parkrun/curated race. Idempotent (no-op if it exists), so it's safe to call when adding an already-existing community race.
-- **Deterministic race IDs** — parkruns `pr_<venueId>_<yyyyMMdd>`; curated events `fa_<urlSlug>` (or `evt_<name>_<date>` if no url); community races: Firestore auto-id.
+- **Deterministic race IDs** — parkruns `pr_<venueId>_<yyyyMMdd>` (bundled) or `prv_<docId>_<yyyyMMdd>` (user-created venue); curated events `fa_<urlSlug>` (or `evt_<name>_<date>` if no url); community races: Firestore auto-id.
+- **User-created parkruns** (`parkrunVenues` collection) — adding a parkrun that isn't in `parkruns_uk.json` creates a *venue* (no date), via "Add it manually" under the parkrun picker. Venues are read by all users and merged into both parkrun pickers (`add_race_screen.dart`, `plan_add_sheet.dart`) so anyone can pick one and choose their own Saturday. Not yet shown on the Explore map (needs lat/lng, which the manual form doesn't collect).
 - **Tapped-date semantics** — on Plan, parkruns are added on the tapped date; a known race keeps its own fixed date (shown in the result), since fixed-date races can't move.
 - **`lightningBolt`** — `recommendPercent >= 0.8` AND `reviewCount >= 10`. ⚡ badge.
 - **`AttendanceStatus`** lives in `lib/models/review_model.dart` (not race_model).

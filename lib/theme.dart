@@ -22,7 +22,7 @@ class AppPalette {
   static const midnight = Color(0xFF0D0E1A); // dark bg
   static const surface = Color(0xFF1C1F2E); // dark card/surface
   static const surfaceHigh = Color(0xFF252837); // dark elevated (sheets/modals)
-  static const hotPink = Color(0xFFFF3CAC); // PB badges / achievements
+  static const hotPink = Color(0xFFFF8AD0); // PB badges / achievements (AAA: 7.6:1 on dark surface; was #FF3CAC @ 5.0:1)
   static const cyan = Color(0xFF00D4FF); // data / stats
 
   // Light surfaces
@@ -40,7 +40,7 @@ class AppPalette {
   // Light-mode deepened accents (AA on white)
   static const violetLink = Color(0xFF5B00C8);
   static const cyanDeep = Color(0xFF0077AA);
-  static const pinkDeep = Color(0xFFC0006A);
+  static const pinkDeep = Color(0xFFA8005C); // AAA: 7.45:1 on white (was #C0006A @ 6.1:1)
   static const tealDeep = Color(0xFF00897B);
   static const oliveOnVolt = Color(0xFF3A6600);
   static const greenDeep = Color(0xFF16A34A);
@@ -605,6 +605,7 @@ class AppConstants {
   static const String palsCol = 'pals';
   static const String palRequestsCol = 'pal_requests';
   static const String activitiesCol = 'activities';
+  static const String parkrunVenuesCol = 'parkrunVenues';
 
   // Race types
   static const List<String> raceTypes = [

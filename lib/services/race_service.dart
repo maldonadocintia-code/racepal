@@ -86,6 +86,53 @@ class RaceService {
     _invalidateRace(raceId);
   }
 
+  // ── Parkrun venues ───────────────────────────────────────────────────────────
+  // User-created parkruns that aren't in the bundled assets/parkruns_uk.json.
+  // They're stored as venues (no date) so every user's parkrun picker can show
+  // them; picking one runs the normal pick-a-Saturday → ensureRace flow, the
+  // same as a bundled parkrun.
+
+  /// Creates a user parkrun venue and returns the `venueId` (`prv_<docId>`) used
+  /// to build per-date race ids. [name] is the bare name (no "parkrun" suffix).
+  Future<String> addParkrunVenue({
+    required String name,
+    required String location,
+    required String createdBy,
+    double? lat,
+    double? lng,
+    String? website,
+  }) async {
+    final ref = await _db.collection(AppConstants.parkrunVenuesCol).add({
+      'name': name,
+      'location': location,
+      'lat': lat,
+      'lng': lng,
+      'website': website,
+      'createdBy': createdBy,
+      'createdAt': Timestamp.now(),
+    });
+    return 'prv_${ref.id}';
+  }
+
+  /// User-created parkrun venues, shaped to match the bundled asset entries
+  /// (`name`, `location`, `lat`, `lng`) plus a stable `venueId` so the pickers
+  /// can merge them with the bundled list and render them identically.
+  Future<List<Map<String, dynamic>>> parkrunVenues() async {
+    final snap = await _db.collection(AppConstants.parkrunVenuesCol).get();
+    return snap.docs.map((d) {
+      final data = d.data();
+      return <String, dynamic>{
+        'id': d.id,
+        'venueId': 'prv_${d.id}',
+        'name': data['name'] ?? '',
+        'location': data['location'] ?? '',
+        'lat': (data['lat'] as num?)?.toDouble(),
+        'lng': (data['lng'] as num?)?.toDouble(),
+        'website': data['website'],
+      };
+    }).toList();
+  }
+
   Stream<List<Race>> searchRaces(String query) {
     final lower = query.toLowerCase();
     return _db
