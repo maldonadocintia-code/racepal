@@ -14,7 +14,7 @@ Also read: `BACKLOG.md` (outstanding work), `PROJECT_INSTRUCTIONS.md` (how to wo
 - App display name: **RacePals** (renamed v0.2.13). **Package id, repo and Firebase project keep the old `racepal` name** — only the user-facing name changed.
 - GitHub: https://github.com/maldonadocintia-code/racepal (public)
 - Latest release: https://github.com/maldonadocintia-code/racepal/releases/latest
-- Current released version: **v0.2.20-beta** (pubspec `0.2.20+21`) — Volt & Velocity rebrand + dark/light themes (see "Design system" section)
+- Current released version: **v0.2.21-beta** (pubspec `0.2.21+22`) — bug fixes (parkrun cancel, calendar weekday clipping, account-deletion follows purge). Volt & Velocity rebrand shipped in v0.2.20 (see "Design system" section).
 - Firebase project: **racepal-ae334**
 
 ---
@@ -215,6 +215,7 @@ Goal: ship to the **Play Store closed-testing** track for feedback. See **`PLAY_
 
 ## Release history (recent)
 
+- **v0.2.21** — Three fixes: (1) **planned parkruns can be cancelled** — a per-date parkrun doc the user marked "going" now shows a red **Not going** button in `RaceDetailScreen` (the `isParkrun` branch previously only offered "Plan a date"/"Review"); (2) **calendar weekday labels** no longer clipped (`daysOfWeekHeight: 24` on `TableCalendar`); (3) **account deletion now purges legacy `follows`** in both directions — otherwise re-signup re-ran the Pals migration and resurrected old connections. Firestore `follows` rule now allows either party to `delete` (create/update still locked); rules deployed.
 - **v0.2.20** — **Volt & Velocity design system**: full rebrand (volt-green on midnight) + **light & dark themes** with a System/Light/Dark selector (Me → Appearance, persisted). Bundled Barlow Condensed + Space Grotesk fonts. New `AppColors`/`AppType`/`AppSpacing`/`AppRadius` tokens; all screens converted. (See "Design system" section.)
 - **v0.2.19** — App-wide type scale (BACKLOG #7): 6-step scale in `theme.dart`, all screens snapped to tokens.
 - **v0.2.18** — Feed redesigned as a timeline (day groups, type icons/colour, timestamps, quoted reviews); clearer review-visibility wording.
