@@ -284,7 +284,6 @@ class RaceService {
       'rating': review.rating,
       'body': review.body,
       'finishTime': review.finishTime,
-      'isPublic': review.isPublic,
     });
   }
 

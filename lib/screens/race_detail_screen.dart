@@ -987,7 +987,6 @@ class _ReviewSheetState extends State<ReviewSheet> {
         rating: _rating,
         body: _bodyCtrl.text.trim().isNotEmpty ? _bodyCtrl.text.trim() : null,
         finishTime: _timeCtrl.text.trim().isNotEmpty ? _timeCtrl.text.trim() : null,
-        isPublic: true,
         recommend: _recommend,
         createdAt: e.createdAt,
       ));
@@ -998,7 +997,6 @@ class _ReviewSheetState extends State<ReviewSheet> {
         rating: _rating,
         body: _bodyCtrl.text.trim().isNotEmpty ? _bodyCtrl.text.trim() : null,
         finishTime: _timeCtrl.text.trim().isNotEmpty ? _timeCtrl.text.trim() : null,
-        isPublic: true,
         recommend: _recommend,
       );
     }

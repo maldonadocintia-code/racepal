@@ -217,7 +217,6 @@ class AppProvider extends ChangeNotifier {
     required double rating,
     String? body,
     String? finishTime,
-    bool isPublic = true,
     bool recommend = true,
   }) async {
     if (_currentUser == null) return;
@@ -230,7 +229,6 @@ class AppProvider extends ChangeNotifier {
       rating: rating,
       body: body,
       finishTime: finishTime,
-      isPublic: isPublic,
       recommend: recommend,
       createdAt: DateTime.now(),
     );

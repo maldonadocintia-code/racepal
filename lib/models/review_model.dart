@@ -8,7 +8,6 @@ class Review {
   final String? userPhotoUrl;
   final double rating; // 1–5 (displayed as ⚡)
   final String? body;
-  final bool isPublic; // true = public, false = followers only
   final DateTime createdAt;
   final String? finishTime; // e.g. "24:32"
   final bool recommend;
@@ -21,7 +20,6 @@ class Review {
     this.userPhotoUrl,
     required this.rating,
     this.body,
-    this.isPublic = true,
     required this.createdAt,
     this.finishTime,
     this.recommend = true,
@@ -37,7 +35,6 @@ class Review {
       userPhotoUrl: d['userPhotoUrl'],
       rating: (d['rating'] as num?)?.toDouble() ?? 3.0,
       body: d['body'],
-      isPublic: d['isPublic'] ?? true,
       createdAt: (d['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       finishTime: d['finishTime'],
       recommend: d['recommend'] ?? true,
@@ -51,7 +48,6 @@ class Review {
     'userPhotoUrl': userPhotoUrl,
     'rating': rating,
     'body': body,
-    'isPublic': isPublic,
     'createdAt': Timestamp.fromDate(createdAt),
     'finishTime': finishTime,
     'recommend': recommend,
