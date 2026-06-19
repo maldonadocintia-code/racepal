@@ -21,11 +21,12 @@ Future<DateTime?> pickParkrunSaturday(BuildContext context) {
     cursor = cursor.add(const Duration(days: 1));
   }
 
+  final c = AppColors.of(context);
   return showModalBottomSheet<DateTime>(
     context: context,
-    backgroundColor: AppTheme.surface,
+    backgroundColor: c.sheetBg,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
     ),
     builder: (ctx) => SafeArea(
       child: Column(
@@ -36,16 +37,20 @@ Future<DateTime?> pickParkrunSaturday(BuildContext context) {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: AppTheme.divider,
+              color: c.sheetHandle,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 16, 20, 4),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text('Which Saturday are you running?',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: AppTheme.fsTitle)),
+                  style: TextStyle(
+                      fontFamily: AppType.heading,
+                      color: c.textPrimary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: AppType.lg)),
             ),
           ),
           Flexible(
@@ -55,8 +60,8 @@ Future<DateTime?> pickParkrunSaturday(BuildContext context) {
               itemBuilder: (_, i) {
                 final s = saturdays[i];
                 return ListTile(
-                  leading: const Icon(Icons.event_available_outlined,
-                      color: AppTheme.primary),
+                  leading: Icon(Icons.event_available_outlined,
+                      color: c.primary),
                   title: Text(DateFormat('EEE d MMM yyyy').format(s)),
                   subtitle: Text(i == 0
                       ? 'This Saturday'

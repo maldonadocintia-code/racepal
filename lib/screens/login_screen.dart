@@ -11,9 +11,10 @@ class LoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AppProvider>();
+    final c = AppColors.of(context);
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: c.bgPrimary,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -26,58 +27,59 @@ class LoginScreen extends StatelessWidget {
                 width: 90,
                 height: 90,
                 decoration: BoxDecoration(
-                  color: AppTheme.primary,
-                  borderRadius: BorderRadius.circular(24),
+                  color: c.primary,
+                  borderRadius: BorderRadius.circular(AppRadius.xxl),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.primary.withOpacity(0.5),
+                      color: c.primary.withValues(alpha: 0.4),
                       blurRadius: 30,
                       offset: const Offset(0, 8),
                     ),
                   ],
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.bolt,
                   size: 52,
-                  color: AppTheme.accent,
+                  color: c.textOnVolt,
                 ),
               ),
               const SizedBox(height: 24),
               Text(
                 AppConstants.appName,
                 style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                  fontSize: 40,
+                  fontSize: AppType.xxxxl,
+                  color: c.textPrimary,
                   letterSpacing: -1,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Your UK running social calendar',
                 style: TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: AppTheme.fsTitle,
+                  color: c.textSecondary,
+                  fontSize: AppType.md,
                 ),
                 textAlign: TextAlign.center,
               ),
               const Spacer(flex: 2),
               // Feature bullets
-              _featureRow(Icons.bolt, 'Track races & parkruns'),
+              _featureRow(context, Icons.bolt, 'Track races & parkruns'),
               const SizedBox(height: 12),
-              _featureRow(Icons.people, 'Follow friends, see their runs'),
+              _featureRow(context, Icons.people, 'Follow friends, see their runs'),
               const SizedBox(height: 12),
-              _featureRow(Icons.star, 'Rate with ⚡ lightning reviews'),
+              _featureRow(context, Icons.star, 'Rate with ⚡ lightning reviews'),
               const Spacer(flex: 2),
               // Google sign in
               if (provider.error != null) ...[
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(10),
+                    color: c.statusError.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
                   child: Text(
                     'Sign in failed. Please try again.',
-                    style: const TextStyle(color: Colors.red, fontSize: AppTheme.fsSecondary),
+                    style: TextStyle(color: c.statusError, fontSize: AppType.sm),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -117,7 +119,8 @@ class LoginScreen extends StatelessWidget {
                             const Text(
                               'Continue with Google',
                               style: TextStyle(
-                                fontSize: AppTheme.fsBody,
+                                fontFamily: AppType.body,
+                                fontSize: AppType.md,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -129,16 +132,16 @@ class LoginScreen extends StatelessWidget {
               Text.rich(
                 TextSpan(
                   text: 'By continuing you agree to our ',
-                  style: const TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: AppTheme.fsCaption,
+                  style: TextStyle(
+                    color: c.textSecondary,
+                    fontSize: AppType.sm,
                   ),
                   children: [
                     TextSpan(
                       text: 'Privacy Policy',
-                      style: const TextStyle(
-                        color: AppTheme.accent,
-                        fontSize: AppTheme.fsCaption,
+                      style: TextStyle(
+                        color: c.textLink,
+                        fontSize: AppType.sm,
                         decoration: TextDecoration.underline,
                       ),
                       recognizer: TapGestureRecognizer()
@@ -160,21 +163,22 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  Widget _featureRow(IconData icon, String text) {
+  Widget _featureRow(BuildContext context, IconData icon, String text) {
+    final c = AppColors.of(context);
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppTheme.primary.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(10),
+            color: c.primaryMuted,
+            borderRadius: BorderRadius.circular(AppRadius.md),
           ),
-          child: Icon(icon, color: AppTheme.accent, size: 18),
+          child: Icon(icon, color: c.textPrimary, size: 18),
         ),
         const SizedBox(width: 14),
         Text(
           text,
-          style: const TextStyle(color: AppTheme.textPrimary, fontSize: AppTheme.fsBody),
+          style: TextStyle(color: c.textPrimary, fontSize: AppType.base),
         ),
       ],
     );

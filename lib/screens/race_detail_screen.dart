@@ -45,6 +45,7 @@ class _RaceDetailBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AppProvider>();
+    final c = AppColors.of(context);
     final uid = provider.currentUser!.uid;
 
     return Scaffold(
@@ -63,7 +64,9 @@ class _RaceDetailBody extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header banner
+            // Header banner — a dark "hero" in both themes so the white text and
+            // volt accents always read. Parkrun gets a green-tinted edge, races
+            // a cyan-tinted one.
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
@@ -71,9 +74,13 @@ class _RaceDetailBody extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: race.isParkrun
-                      ? [AppTheme.primary, AppTheme.primary.withBlue(255)]
-                      : [const Color(0xFF1A1A2E), AppTheme.surface],
+                  colors: [
+                    Color.alphaBlend(
+                        (race.isParkrun ? AppPalette.goGreen : AppPalette.cyan)
+                            .withValues(alpha: 0.18),
+                        AppPalette.surfaceHigh),
+                    AppPalette.midnight,
+                  ],
                 ),
               ),
               child: Column(
@@ -84,8 +91,9 @@ class _RaceDetailBody extends StatelessWidget {
                   Text(
                     race.name,
                     style: const TextStyle(
-                      fontSize: AppTheme.fsDisplay,
-                      fontWeight: FontWeight.w800,
+                      fontFamily: AppType.heading,
+                      fontSize: AppType.xxl,
+                      fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
                   ),
@@ -95,7 +103,7 @@ class _RaceDetailBody extends StatelessWidget {
                       const Icon(Icons.location_on, size: 16, color: Colors.white70),
                       const SizedBox(width: 4),
                       Text(race.location,
-                          style: const TextStyle(color: Colors.white70, fontSize: AppTheme.fsBody)),
+                          style: const TextStyle(color: Colors.white70, fontSize: AppType.base)),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -107,7 +115,7 @@ class _RaceDetailBody extends StatelessWidget {
                         race.isParkrun
                             ? 'Every Saturday · 9:00am'
                             : DateFormat('EEEE, d MMMM yyyy').format(race.date),
-                        style: const TextStyle(color: Colors.white70, fontSize: AppTheme.fsBody),
+                        style: const TextStyle(color: Colors.white70, fontSize: AppType.base),
                       ),
                     ],
                   ),
@@ -119,7 +127,7 @@ class _RaceDetailBody extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           '${race.averageRating.toStringAsFixed(1)} · ${race.reviewCount} reviews',
-                          style: const TextStyle(color: Colors.white70, fontSize: AppTheme.fsSecondary),
+                          style: const TextStyle(color: Colors.white70, fontSize: AppType.sm),
                         ),
                       ],
                     ),
@@ -141,7 +149,7 @@ class _RaceDetailBody extends StatelessWidget {
               _section('About', Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(race.description!,
-                    style: const TextStyle(color: AppTheme.textSecondary)),
+                    style: TextStyle(color: c.textSecondary)),
               )),
             ],
 
@@ -153,8 +161,8 @@ class _RaceDetailBody extends StatelessWidget {
                   icon: const Icon(Icons.open_in_new, size: 16),
                   label: const Text('Race website'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.accent,
-                    side: const BorderSide(color: AppTheme.accent),
+                    foregroundColor: c.textLink,
+                    side: BorderSide(color: c.textLink),
                   ),
                 ),
               ),
@@ -179,45 +187,52 @@ class _RaceDetailBody extends StatelessWidget {
     );
   }
 
-  Widget _section(String title, Widget child) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-        child: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: AppTheme.fsTitle,
-            color: AppTheme.textPrimary,
+  Widget _section(String title, Widget child) => Builder(
+    builder: (context) {
+      final c = AppColors.of(context);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              title,
+              style: TextStyle(
+                fontFamily: AppType.heading,
+                fontWeight: FontWeight.w700,
+                fontSize: AppType.lg,
+                color: c.textPrimary,
+              ),
+            ),
           ),
-        ),
-      ),
-      child,
-    ],
+          child,
+        ],
+      );
+    },
   );
 
   Widget _typeBadge(Race race) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
     decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.15),
-      borderRadius: BorderRadius.circular(20),
+      color: Colors.white.withValues(alpha: 0.15),
+      borderRadius: BorderRadius.circular(AppRadius.full),
     ),
     child: Text(
       race.type,
-      style: const TextStyle(color: Colors.white, fontSize: AppTheme.fsCaption, fontWeight: FontWeight.w600),
+      style: const TextStyle(color: Colors.white, fontSize: AppType.sm, fontWeight: FontWeight.w600),
     ),
   );
 
   Future<void> _confirmDelete(BuildContext context, AppProvider provider) async {
+    final c = AppColors.of(context);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: c.bgSurfaceHigh,
         title: const Text('Delete race?'),
-        content: const Text(
+        content: Text(
           'This will permanently delete the race.',
-          style: TextStyle(color: AppTheme.textSecondary),
+          style: TextStyle(color: c.textSecondary),
         ),
         actions: [
           TextButton(
@@ -375,22 +390,31 @@ class _AttendanceRowState extends State<_AttendanceRow> {
     bool accent = false,
     bool danger = false,
   }) {
+    final c = AppColors.of(context);
+    final Color bg = active
+        ? c.actionBg
+        : accent
+            ? c.primaryMuted
+            : danger
+                ? Colors.red.withValues(alpha: 0.1)
+                : c.bgSurfaceHigh;
+    final Color fg = active
+        ? c.actionText
+        : accent
+            ? c.textLink
+            : danger
+                ? Colors.red
+                : c.textSecondary;
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: active
-                ? AppTheme.primary
-                : accent
-                    ? AppTheme.accent.withOpacity(0.15)
-                    : danger
-                        ? Colors.red.withValues(alpha: 0.1)
-                        : AppTheme.surfaceLight,
-            borderRadius: BorderRadius.circular(12),
+            color: bg,
+            borderRadius: BorderRadius.circular(AppRadius.md),
             border: accent && !active
-                ? Border.all(color: AppTheme.accent.withOpacity(0.5))
+                ? Border.all(color: c.textLink.withValues(alpha: 0.5))
                 : danger
                     ? Border.all(color: Colors.red.withValues(alpha: 0.4))
                     : null,
@@ -398,28 +422,14 @@ class _AttendanceRowState extends State<_AttendanceRow> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon,
-                  size: 16,
-                  color: active
-                      ? Colors.white
-                      : accent
-                          ? AppTheme.accent
-                          : danger
-                              ? Colors.red
-                              : AppTheme.textSecondary),
+              Icon(icon, size: 16, color: fg),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
-                  color: active
-                      ? Colors.white
-                      : accent
-                          ? AppTheme.accent
-                          : danger
-                              ? Colors.red
-                              : AppTheme.textSecondary,
+                  color: fg,
                   fontWeight: FontWeight.w600,
-                  fontSize: AppTheme.fsSecondary,
+                  fontSize: AppType.sm,
                 ),
               ),
             ],
@@ -433,9 +443,9 @@ class _AttendanceRowState extends State<_AttendanceRow> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: AppColors.of(context).sheetBg,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
       ),
       builder: (_) => ReviewSheet(race: widget.race),
     );
@@ -471,6 +481,7 @@ class _PalsSectionState extends State<_PalsSection> {
     if (_palUids.isEmpty) return const SizedBox.shrink();
 
     final provider = context.read<AppProvider>();
+    final c = AppColors.of(context);
     return StreamBuilder<List<Attendance>>(
       stream: provider.raceService.raceAttendees(widget.raceId),
       builder: (ctx, snap) {
@@ -487,26 +498,27 @@ class _PalsSectionState extends State<_PalsSection> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Row(
                 children: [
-                  const Text(
+                  Text(
                     'Pals',
                     style: TextStyle(
+                      fontFamily: AppType.heading,
                       fontWeight: FontWeight.w700,
-                      fontSize: AppTheme.fsTitle,
-                      color: AppTheme.textPrimary,
+                      fontSize: AppType.lg,
+                      color: c.textPrimary,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: AppTheme.primary.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
+                      color: c.palBadgeBg,
+                      borderRadius: BorderRadius.circular(AppRadius.full),
                     ),
                     child: Text(
                       '${palAttendances.length}',
-                      style: const TextStyle(
-                        color: AppTheme.primary,
-                        fontSize: AppTheme.fsCaption,
+                      style: TextStyle(
+                        color: c.palBadgeText,
+                        fontSize: AppType.sm,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -538,9 +550,9 @@ class _PalsSectionState extends State<_PalsSection> {
                             const SizedBox(height: 4),
                             Text(
                               u?.displayName.split(' ').first ?? '...',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppTheme.textPrimary,
+                              style: TextStyle(
+                                fontSize: AppType.xs,
+                                color: c.textPrimary,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -549,10 +561,10 @@ class _PalsSectionState extends State<_PalsSection> {
                                   ? 'Going'
                                   : 'Been here',
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: AppType.xs,
                                 color: a.status == AttendanceStatus.going
-                                    ? AppTheme.primary
-                                    : AppTheme.accent,
+                                    ? c.secondary
+                                    : c.statusLive,
                               ),
                             ),
                           ],
@@ -577,15 +589,16 @@ class _AttendeesList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.read<AppProvider>();
+    final c = AppColors.of(context);
     return StreamBuilder<List<Attendance>>(
       stream: provider.raceService.raceAttendees(raceId),
       builder: (ctx, snap) {
         final attendees = snap.data ?? [];
         if (attendees.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text('No attendees yet. Be the first!',
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
+                style: TextStyle(color: c.textSecondary, fontSize: AppType.sm)),
           );
         }
         return SizedBox(
@@ -623,15 +636,16 @@ class _ReviewSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.read<AppProvider>();
+    final c = AppColors.of(context);
     return StreamBuilder<List<Review>>(
       stream: provider.raceService.raceReviews(race.id, publicOnly: true),
       builder: (ctx, snap) {
         final reviews = snap.data ?? [];
         if (reviews.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text('No reviews yet.',
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
+                style: TextStyle(color: c.textSecondary, fontSize: AppType.sm)),
           );
         }
         return ListView.builder(
@@ -645,9 +659,9 @@ class _ReviewSection extends StatelessWidget {
             onEdit: () => showModalBottomSheet(
               context: ctx,
               isScrollControlled: true,
-              backgroundColor: AppTheme.surface,
+              backgroundColor: c.sheetBg,
               shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
               ),
               builder: (_) => ReviewSheet(
                 race: race,
@@ -713,6 +727,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Padding(
       // Pad by the keyboard height so the sheet lifts above it, and make the
       // content scrollable so the "Post review" button is always reachable
@@ -733,7 +748,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.divider,
+                color: c.sheetHandle,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -741,10 +756,15 @@ class _ReviewSheetState extends State<ReviewSheet> {
           const SizedBox(height: 16),
           Text(
             _isEditing ? 'Edit review' : 'Review: ${widget.race.name}',
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: AppTheme.fsTitle),
+            style: TextStyle(
+                fontFamily: AppType.heading,
+                color: c.textPrimary,
+                fontWeight: FontWeight.w700,
+                fontSize: AppType.lg),
           ),
           const SizedBox(height: 16),
-          const Text('Your rating', style: TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
+          Text('Your rating',
+              style: TextStyle(color: c.textSecondary, fontSize: AppType.sm)),
           const SizedBox(height: 8),
           LightningRating(
             rating: _rating,
@@ -772,8 +792,8 @@ class _ReviewSheetState extends State<ReviewSheet> {
             ),
           ),
           const SizedBox(height: 16),
-          const Text('Would you recommend this event?',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
+          Text('Would you recommend this event?',
+              style: TextStyle(color: c.textSecondary, fontSize: AppType.sm)),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -783,10 +803,8 @@ class _ReviewSheetState extends State<ReviewSheet> {
             ],
           ),
           const SizedBox(height: 12),
-          const Text('Who can see this review?',
-              style: TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: AppTheme.fsSecondary)),
+          Text('Who can see this review?',
+              style: TextStyle(color: c.textSecondary, fontSize: AppType.sm)),
           const SizedBox(height: 4),
           _visibilityOption(
               true, 'Everyone on RacePals', 'Any RacePals user can see it'),
@@ -810,25 +828,27 @@ class _ReviewSheetState extends State<ReviewSheet> {
   }
 
   Widget _visibilityOption(bool value, String title, String subtitle) {
+    final c = AppColors.of(context);
     return InkWell(
       onTap: () => setState(() => _isPublic = value),
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(AppRadius.sm),
       child: Row(
         children: [
           Radio<bool>(
             value: value,
             groupValue: _isPublic,
+            activeColor: c.textLink,
             onChanged: (v) => setState(() => _isPublic = v!),
           ),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: AppTheme.fsBody)),
+                Text(title,
+                    style: TextStyle(color: c.textPrimary, fontSize: AppType.base)),
                 Text(subtitle,
-                    style: const TextStyle(
-                        fontSize: AppTheme.fsCaption,
-                        color: AppTheme.textSecondary)),
+                    style: TextStyle(
+                        fontSize: AppType.sm, color: c.textSecondary)),
               ],
             ),
           ),
@@ -838,7 +858,17 @@ class _ReviewSheetState extends State<ReviewSheet> {
   }
 
   Widget _recommendBtn(bool value, String label) {
+    final c = AppColors.of(context);
     final selected = _recommend == value;
+    final Color bg = selected && value ? c.actionBg : c.bgSurfaceHigh;
+    final Color fg = selected && value
+        ? c.actionText
+        : selected
+            ? c.textPrimary
+            : c.textSecondary;
+    final Color border = selected
+        ? (value ? c.actionBg : c.textSecondary)
+        : c.divider;
     return Expanded(
       child: GestureDetector(
         onTap: () => setState(() => _recommend = value),
@@ -846,23 +876,17 @@ class _ReviewSheetState extends State<ReviewSheet> {
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: selected
-                ? (value ? AppTheme.primary : AppTheme.surfaceLight)
-                : AppTheme.surfaceLight,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: selected
-                  ? (value ? AppTheme.primary : AppTheme.textSecondary)
-                  : AppTheme.divider,
-            ),
+            color: bg,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(color: border),
           ),
           child: Center(
             child: Text(
               label,
               style: TextStyle(
-                color: selected ? Colors.white : AppTheme.textSecondary,
+                color: fg,
                 fontWeight: FontWeight.w600,
-                fontSize: AppTheme.fsBody,
+                fontSize: AppType.base,
               ),
             ),
           ),

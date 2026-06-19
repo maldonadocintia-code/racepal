@@ -14,7 +14,8 @@ Also read: `BACKLOG.md` (outstanding work), `PROJECT_INSTRUCTIONS.md` (how to wo
 - App display name: **RacePals** (renamed v0.2.13). **Package id, repo and Firebase project keep the old `racepal` name** — only the user-facing name changed.
 - GitHub: https://github.com/maldonadocintia-code/racepal (public)
 - Latest release: https://github.com/maldonadocintia-code/racepal/releases/latest
-- Current version: **v0.2.15-beta**
+- Current released version: **v0.2.19-beta** (pubspec `0.2.19+20`)
+- **In progress (uncommitted on `master`):** Volt & Velocity design-system rebrand + dark/light theming — see "Design system" section below
 - Firebase project: **racepal-ae334**
 
 ---
@@ -110,9 +111,29 @@ A single **symmetric friendship**. No more one-directional follows, no follower/
 | File | Purpose |
 |---|---|
 | `lib/main.dart` | App entry, Firebase init, `RacePalApp` (class name unchanged). |
-| `lib/theme.dart` | `AppTheme` (purple `#6C3CE1`, accent `#FFD600`), `AppConstants` (collection names incl. `palsCol`, `palRequestsCol`; `appName = 'RacePals'`). Calendar pals teal `#22D3EE` is local to `calendar_screen`. |
+| `lib/theme.dart` | **Volt & Velocity design system** (see section below): `AppPalette`, `AppColors` (semantic, dark/light, `.of(context)`), `AppType`/`AppSpacing`/`AppRadius`, `AppTheme.light`/`.dark`. Legacy `AppTheme.*` purple constants kept for unconverted screens. Plus `AppConstants` (collection names incl. `palsCol`, `palRequestsCol`; `appName = 'RacePals'`). |
+| `lib/services/theme_controller.dart` | `ThemeController` (ChangeNotifier) — System/Light/Dark theme mode, persisted via `shared_preferences` (`themeMode` key). Selector lives in the Me screen. |
 | `lib/widgets/shared_widgets.dart` | `UserAvatar`, `ActivityCard`, **`PalButton`** (states: Add pal / Requested / Accept pal / Pals ✓). |
 | `lib/utils/geo.dart` | `milesBetween()` haversine for radius search. |
+
+---
+
+## Design system — Volt & Velocity (in progress)
+
+A dark **and** light theme rebrand. Source spec: the `racepals-design-system.md` doc the user supplied (written for React Native; translated to Flutter). Started 2026-06-18, **not yet committed/released**.
+
+**Identity:** primary = **volt green `#C4FF00`** on near-black `#0D0E1A` (replaces the old purple `#6C3CE1`). Fonts: **Barlow Condensed ExtraBold** (display/stats/distances) + **Space Grotesk** (body/headings) — bundled in `assets/fonts/`, declared in `pubspec.yaml`. Space Grotesk is a variable font; weight is picked from `fontWeight`.
+
+**How theming works (Flutter idiom):**
+- `lib/theme.dart`: `AppPalette` (raw colours) → `AppColors` (~65 semantic tokens, two `const` instances `dark`/`light`, fetched with `AppColors.of(context)` which switches on `Theme.of(context).brightness`) → `AppType`/`AppSpacing`/`AppRadius` tokens → `AppTheme.light`/`AppTheme.dark` `ThemeData`.
+- `lib/services/theme_controller.dart` holds the mode (System/Light/Dark), persisted via `shared_preferences`. `main.dart` uses `MultiProvider` and `MaterialApp(theme: AppTheme.light, darkTheme: AppTheme.dark, themeMode: controller.mode)`.
+- **New code:** use `final c = AppColors.of(context);` then `c.primary` etc., plus `AppType.*`/`AppSpacing.*`/`AppRadius.*`. **Do not** add new `AppTheme.primary`-style static refs or numeric `fontSize:`.
+
+**Migration is incremental.** Legacy `AppTheme.*` colour + `fs*` constants are kept (mapped to the OLD purple) so unconverted screens still compile. **A screen not yet converted will not adapt to light mode** (static consts don't switch) — expect dark-on-light breakage there until its pass.
+
+**Status:** ✅ theme infra, ✅ Me-screen Appearance selector, ✅ Explore (`map_screen.dart`). **Remaining (~13 files):** `feed_screen`, `calendar_screen`, `profile_screen` (selector only so far), `race_detail_screen`, `add_race_screen`, `edit_profile_screen`, `pals_screen`, `login_screen`, `home_shell`, `widgets/shared_widgets`, `widgets/plan_add_sheet`, `widgets/parkrun_helpers`.
+
+**Accessibility:** doc's verified contrast values kept. Watch the light-mode "Going" badge (olive-on-volt-tint, AA not AAA).
 
 ---
 
@@ -195,6 +216,10 @@ Goal: ship to the **Play Store closed-testing** track for feedback. See **`PLAY_
 
 ## Release history (recent)
 
+- **v0.2.19** — App-wide type scale (BACKLOG #7): 6-step scale in `theme.dart`, all screens snapped to tokens.
+- **v0.2.18** — Feed redesigned as a timeline (day groups, type icons/colour, timestamps, quoted reviews); clearer review-visibility wording.
+- **v0.2.17** — Explore shows ratings next to curated races/parkruns (B6); faster review posting + scrollable sheet (B7); calendar read/cost fix (race cache + no day-tap reload, #9).
+- **v0.2.16** — GDPR: in-app account deletion, sign-up consent + privacy policy, dropped Analytics, release-signing config; `users` self-delete rule deployed.
 - **v0.2.15** — Curated Manchester race set (hid findarace/major); fixed Explore race duplication.
 - **v0.2.14** — Fixed accept-pal crash (batch-delete gotcha); incoming-request badge on Feed tab.
 - **v0.2.13** — **Pals friendship model** (replaced follows); app renamed **RacePals**; "Add new event" wording; migration from follows.

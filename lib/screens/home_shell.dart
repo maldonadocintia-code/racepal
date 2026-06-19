@@ -43,8 +43,8 @@ class _HomeShellState extends State<HomeShell> {
         children: _screens,
       ),
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: AppTheme.divider)),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: AppColors.of(context).divider)),
         ),
         child: StreamBuilder<List<Map<String, dynamic>>>(
           stream: _requestStream,

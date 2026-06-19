@@ -35,6 +35,7 @@ class _AddRaceScreenState extends State<AddRaceScreen>
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add new event'),
@@ -44,9 +45,9 @@ class _AddRaceScreenState extends State<AddRaceScreen>
             Tab(text: 'Race'),
             Tab(text: 'Parkrun'),
           ],
-          indicatorColor: AppTheme.accent,
-          labelColor: AppTheme.textPrimary,
-          unselectedLabelColor: AppTheme.textSecondary,
+          indicatorColor: c.primary,
+          labelColor: c.textPrimary,
+          unselectedLabelColor: c.textSecondary,
         ),
       ),
       body: TabBarView(
@@ -94,6 +95,7 @@ class _ManualRaceFormState extends State<_ManualRaceForm> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -117,7 +119,8 @@ class _ManualRaceFormState extends State<_ManualRaceForm> {
           ),
           const SizedBox(height: 12),
           // Type selector
-          const Text('Race type', style: TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
+          Text('Race type',
+              style: TextStyle(color: c.textSecondary, fontSize: AppType.sm)),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -129,14 +132,20 @@ class _ManualRaceFormState extends State<_ManualRaceForm> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: _type == t ? AppTheme.primary : AppTheme.surfaceLight,
-                          borderRadius: BorderRadius.circular(20),
+                          color: _type == t ? c.filterActive : c.filterInactive,
+                          borderRadius: BorderRadius.circular(AppRadius.full),
+                          border: Border.all(
+                              color: _type == t
+                                  ? Colors.transparent
+                                  : c.filterBorder),
                         ),
                         child: Text(
                           t,
                           style: TextStyle(
-                            color: _type == t ? Colors.white : AppTheme.textSecondary,
-                            fontSize: AppTheme.fsSecondary,
+                            color: _type == t
+                                ? c.filterActiveText
+                                : c.filterInactiveText,
+                            fontSize: AppType.sm,
                           ),
                         ),
                       ),
@@ -150,19 +159,20 @@ class _ManualRaceFormState extends State<_ManualRaceForm> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
-                color: AppTheme.surfaceLight,
-                borderRadius: BorderRadius.circular(12),
+                color: c.bgInput,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                border: Border.all(color: c.border),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.calendar_today, color: AppTheme.textSecondary, size: 20),
+                  Icon(Icons.calendar_today, color: c.textSecondary, size: 20),
                   const SizedBox(width: 12),
                   Text(
                     _date == null
                         ? 'Select date *'
                         : DateFormat('EEE, d MMMM yyyy').format(_date!),
                     style: TextStyle(
-                      color: _date == null ? AppTheme.textSecondary : AppTheme.textPrimary,
+                      color: _date == null ? c.textSecondary : c.textPrimary,
                     ),
                   ),
                 ],
@@ -208,16 +218,6 @@ class _ManualRaceFormState extends State<_ManualRaceForm> {
       initialDate: DateTime.now().add(const Duration(days: 7)),
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 730)),
-      builder: (ctx, child) => Theme(
-        data: ThemeData.dark().copyWith(
-          colorScheme: const ColorScheme.dark(
-            primary: AppTheme.primary,
-            onPrimary: Colors.white,
-            surface: AppTheme.surface,
-          ),
-        ),
-        child: child!,
-      ),
     );
     if (picked != null) setState(() => _date = picked);
   }
@@ -302,15 +302,16 @@ class _ParkrunSelectorState extends State<_ParkrunSelector> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.all(16),
           child: TextField(
             controller: _searchCtrl,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               hintText: 'Search parkruns...',
-              prefixIcon: Icon(Icons.search, color: AppTheme.textSecondary),
+              prefixIcon: Icon(Icons.search, color: c.searchIcon),
             ),
           ),
         ),
@@ -319,52 +320,54 @@ class _ParkrunSelectorState extends State<_ParkrunSelector> {
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.primary),
+              color: c.primaryMuted,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(color: c.primary),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.bolt, color: AppTheme.accent, size: 18),
+                    Icon(Icons.bolt, color: AppPalette.goGreen, size: 18),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         '${_selected!['name']} parkrun',
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                        style: TextStyle(
+                            color: c.textPrimary, fontWeight: FontWeight.w700),
                       ),
                     ),
                     GestureDetector(
                       onTap: () => setState(() => _selected = null),
-                      child: const Icon(Icons.close, size: 18, color: AppTheme.textSecondary),
+                      child: Icon(Icons.close, size: 18, color: c.textTertiary),
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(_selected!['location'].toString(),
-                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
+                    style: TextStyle(color: c.textSecondary, fontSize: AppType.sm)),
                 const SizedBox(height: 12),
                 GestureDetector(
                   onTap: _pickDate,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      color: AppTheme.surfaceLight,
-                      borderRadius: BorderRadius.circular(10),
+                      color: c.bgInput,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      border: Border.all(color: c.border),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.calendar_today, size: 16, color: AppTheme.textSecondary),
+                        Icon(Icons.calendar_today, size: 16, color: c.textSecondary),
                         const SizedBox(width: 8),
                         Text(
                           _date == null
                               ? 'Select Saturday *'
                               : DateFormat('EEE, d MMMM yyyy').format(_date!),
                           style: TextStyle(
-                            color: _date == null ? AppTheme.textSecondary : AppTheme.textPrimary,
-                            fontSize: AppTheme.fsSecondary,
+                            color: _date == null ? c.textSecondary : c.textPrimary,
+                            fontSize: AppType.sm,
                           ),
                         ),
                       ],
@@ -393,14 +396,16 @@ class _ParkrunSelectorState extends State<_ParkrunSelector> {
             itemBuilder: (ctx, i) {
               final p = _filtered[i];
               return ListTile(
-                leading: const Icon(Icons.bolt, color: AppTheme.primary, size: 20),
-                title: Text('${p['name']} parkrun'),
+                leading: Icon(Icons.bolt, color: AppPalette.goGreen, size: 20),
+                title: Text('${p['name']} parkrun',
+                    style: TextStyle(color: c.textPrimary)),
                 subtitle: Text(p['location'].toString(),
-                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsCaption)),
+                    style: TextStyle(color: c.textSecondary, fontSize: AppType.sm)),
                 onTap: () => setState(() => _selected = p),
                 selected: _selected?['id'] == p['id'],
-                selectedTileColor: AppTheme.primary.withValues(alpha: 0.08),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                selectedTileColor: c.primaryMuted,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md)),
               );
             },
           ),
@@ -418,16 +423,6 @@ class _ParkrunSelectorState extends State<_ParkrunSelector> {
       initialDate: nextSaturday,
       firstDate: now.subtract(const Duration(days: 365)),
       lastDate: now.add(const Duration(days: 730)),
-      builder: (ctx, child) => Theme(
-        data: ThemeData.dark().copyWith(
-          colorScheme: const ColorScheme.dark(
-            primary: AppTheme.primary,
-            onPrimary: Colors.white,
-            surface: AppTheme.surface,
-          ),
-        ),
-        child: child!,
-      ),
     );
     if (picked != null) setState(() => _date = picked);
   }

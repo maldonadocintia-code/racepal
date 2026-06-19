@@ -21,9 +21,9 @@ Future<void> showPlanAddSheet(BuildContext context, DateTime date) async {
   final message = await showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: AppTheme.surface,
+    backgroundColor: AppColors.of(context).sheetBg,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
     ),
     builder: (_) => _PlanAddSheet(date: date),
   );
@@ -227,6 +227,7 @@ class _PlanAddSheetState extends State<_PlanAddSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final dateLabel = DateFormat('EEE d MMM yyyy').format(widget.date);
     final results = _results;
     return Padding(
@@ -245,24 +246,27 @@ class _PlanAddSheetState extends State<_PlanAddSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.divider,
+                color: c.sheetHandle,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           const SizedBox(height: 14),
-          const Text('Add a race',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: AppTheme.fsHeading)),
+          Text('Add a race',
+              style: TextStyle(
+                  fontFamily: AppType.heading,
+                  color: c.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: AppType.xl)),
           const SizedBox(height: 2),
           Row(
             children: [
-              const Icon(Icons.calendar_today_outlined,
-                  size: 13, color: AppTheme.accent),
+              Icon(Icons.calendar_today_outlined, size: 13, color: c.textLink),
               const SizedBox(width: 4),
               Text(dateLabel,
-                  style: const TextStyle(
-                      color: AppTheme.accent,
-                      fontSize: AppTheme.fsSecondary,
+                  style: TextStyle(
+                      color: c.textLink,
+                      fontSize: AppType.sm,
                       fontWeight: FontWeight.w700)),
             ],
           ),
@@ -273,9 +277,9 @@ class _PlanAddSheetState extends State<_PlanAddSheet> {
             autocorrect: false,
             textInputAction: TextInputAction.search,
             onChanged: (v) => setState(() => _query = v),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               hintText: 'Search a race or parkrun by name',
-              prefixIcon: Icon(Icons.search, color: AppTheme.textSecondary),
+              prefixIcon: Icon(Icons.search, color: c.searchIcon),
             ),
           ),
           const SizedBox(height: 8),
@@ -285,7 +289,7 @@ class _PlanAddSheetState extends State<_PlanAddSheet> {
             ),
             child: _buildResults(results),
           ),
-          const Divider(height: 18, color: AppTheme.divider),
+          Divider(height: 18, color: c.divider),
           Center(
             child: TextButton.icon(
               onPressed: _addManually,
@@ -300,6 +304,7 @@ class _PlanAddSheetState extends State<_PlanAddSheet> {
   }
 
   Widget _buildResults(List<_Known> results) {
+    final c = AppColors.of(context);
     if (!_loaded) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 24),
@@ -307,29 +312,31 @@ class _PlanAddSheetState extends State<_PlanAddSheet> {
       );
     }
     if (_query.trim().isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 20),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
         child: Text('Type a race or parkrun name to find it.',
-            style: TextStyle(color: AppTheme.textSecondary)),
+            style: TextStyle(color: c.textSecondary)),
       );
     }
     if (results.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 20),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
         child: Text('No matches — try "add it manually" below.',
-            style: TextStyle(color: AppTheme.textSecondary)),
+            style: TextStyle(color: c.textSecondary)),
       );
     }
     return ListView.separated(
       shrinkWrap: true,
       itemCount: results.length,
-      separatorBuilder: (_, __) =>
-          const Divider(height: 1, color: AppTheme.divider),
+      separatorBuilder: (_, __) => Divider(height: 1, color: c.divider),
       itemBuilder: (_, i) => _resultTile(results[i]),
     );
   }
 
   Widget _resultTile(_Known k) {
+    final c = AppColors.of(context);
+    // parkrun = green, race = cyan (matches the rest of the app, light-safe).
+    final color = k.isParkrun ? AppPalette.goGreen : c.secondary;
     final sub = k.isParkrun
         ? 'Parkrun · ${k.location}'
         : '${DateFormat('EEE d MMM yyyy').format(k.fixedDate!)} · ${k.location}';
@@ -337,20 +344,22 @@ class _PlanAddSheetState extends State<_PlanAddSheet> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 2),
       leading: CircleAvatar(
         radius: 16,
-        backgroundColor: (k.isParkrun ? AppTheme.success : AppTheme.accent)
-            .withValues(alpha: 0.18),
+        backgroundColor: color.withValues(alpha: 0.18),
         child: Icon(
           k.isParkrun ? Icons.directions_run : Icons.flag_outlined,
           size: 17,
-          color: k.isParkrun ? AppTheme.success : AppTheme.accent,
+          color: color,
         ),
       ),
       title: Text(k.name,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: AppTheme.fsBody),
+          style: TextStyle(
+              color: c.textPrimary,
+              fontWeight: FontWeight.w600,
+              fontSize: AppType.base),
           maxLines: 1,
           overflow: TextOverflow.ellipsis),
       subtitle: Text(sub,
-          style: const TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsCaption),
+          style: TextStyle(color: c.textSecondary, fontSize: AppType.sm),
           maxLines: 1,
           overflow: TextOverflow.ellipsis),
       trailing: _saving
@@ -358,7 +367,7 @@ class _PlanAddSheetState extends State<_PlanAddSheet> {
               width: 18,
               height: 18,
               child: CircularProgressIndicator(strokeWidth: 2))
-          : const Icon(Icons.add_circle, color: AppTheme.primary),
+          : Icon(Icons.add_circle, color: c.primary),
       onTap: _saving ? null : () => _add(k),
     );
   }

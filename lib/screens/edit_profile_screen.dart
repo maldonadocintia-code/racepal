@@ -48,11 +48,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _showPhotoOptions() {
+    final c = AppColors.of(context);
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: c.sheetBg,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
       ),
       builder: (_) => SafeArea(
         child: Column(
@@ -63,7 +64,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.divider,
+                color: c.sheetHandle,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -94,6 +95,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AppProvider>().currentUser!;
+    final c = AppColors.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -106,7 +108,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Save', style: TextStyle(color: AppTheme.accent)),
+                : Text('Save',
+                    style: TextStyle(
+                        color: c.textLink, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -137,11 +141,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: AppTheme.primary,
+                          color: c.primary,
                           shape: BoxShape.circle,
-                          border: Border.all(color: AppTheme.background, width: 2),
+                          border: Border.all(color: c.bgPrimary, width: 2),
                         ),
-                        child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                        child: Icon(Icons.camera_alt, size: 16, color: c.textOnVolt),
                       ),
                     ),
                   ),
@@ -164,8 +168,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             Center(
               child: TextButton(
                 onPressed: _showPhotoOptions,
-                child: const Text('Change profile photo',
-                    style: TextStyle(color: AppTheme.primary)),
+                child: Text('Change profile photo',
+                    style: TextStyle(color: c.textLink)),
               ),
             ),
             const SizedBox(height: 16),

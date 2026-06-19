@@ -17,6 +17,7 @@ class FeedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AppProvider>();
+    final c = AppColors.of(context);
     final palUids = provider.palUids;
     final myUid = provider.currentUser!.uid;
 
@@ -46,16 +47,16 @@ class FeedScreen extends StatelessWidget {
                         padding: const EdgeInsets.all(4),
                         constraints:
                             const BoxConstraints(minWidth: 18, minHeight: 18),
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
+                        decoration: BoxDecoration(
+                          color: c.notifBg,
                           shape: BoxShape.circle,
                         ),
                         child: Text(
                           '$count',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
+                          style: TextStyle(
+                              color: c.notifText,
+                              fontSize: AppType.xs,
                               fontWeight: FontWeight.w700),
                         ),
                       ),
@@ -83,26 +84,28 @@ class FeedScreen extends StatelessWidget {
   }
 
   Widget _emptyFeed(BuildContext context) {
+    final c = AppColors.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.bolt, size: 56, color: AppTheme.accent),
+            Icon(Icons.bolt, size: 56, color: c.primary),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Your feed is empty',
               style: TextStyle(
-                color: AppTheme.textPrimary,
-                fontSize: AppTheme.fsDisplay,
+                fontFamily: AppType.heading,
+                color: c.textPrimary,
+                fontSize: AppType.xl,
                 fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Add pals to see their races, parkruns and reviews here.',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsBody),
+              style: TextStyle(color: c.textSecondary, fontSize: AppType.base),
               textAlign: TextAlign.center,
             ),
           ],
@@ -114,10 +117,10 @@ class FeedScreen extends StatelessWidget {
   void _showRequests(BuildContext context, String myUid) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: AppColors.of(context).sheetBg,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
       ),
       builder: (_) => _PalRequestsSheet(myUid: myUid),
     );
@@ -153,7 +156,7 @@ class _FeedTimeline extends StatelessWidget {
       final item = items[i];
       final bucket = _bucket(item.createdAt);
       if (bucket != lastBucket) {
-        children.add(_dayHeader(bucket));
+        children.add(_dayHeader(context, bucket));
         lastBucket = bucket;
       }
       final isLastInBucket =
@@ -166,15 +169,16 @@ class _FeedTimeline extends StatelessWidget {
     );
   }
 
-  Widget _dayHeader(String label) => Padding(
+  Widget _dayHeader(BuildContext context, String label) => Padding(
         padding: const EdgeInsets.fromLTRB(0, 14, 0, 6),
         child: Text(
           label.toUpperCase(),
-          style: const TextStyle(
-            color: AppTheme.textSecondary,
-            fontSize: AppTheme.fsCaption,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.8,
+          style: TextStyle(
+            fontFamily: AppType.body,
+            color: AppColors.of(context).feedSectionLabel,
+            fontSize: AppType.xs,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 2,
           ),
         ),
       );
@@ -185,23 +189,26 @@ class _TimelineRow extends StatelessWidget {
   final bool isLast;
   const _TimelineRow({required this.item, required this.isLast});
 
-  // (colour, icon, verb) per activity type.
-  static (Color, IconData, String) _style(String type) {
+  // (node colour, icon, verb) per activity type. Node colours are chosen to read
+  // in both themes (going=cyan, attended=green, review=pink); volt is reserved
+  // for the race-name link via feedLinkText.
+  static (Color, IconData, String) _style(AppColors c, String type) {
     switch (type) {
       case 'going':
-        return (AppTheme.primary, Icons.place, 'is going to ');
+        return (c.secondary, Icons.place, 'is going to ');
       case 'attended':
-        return (AppTheme.success, Icons.check_circle, 'attended ');
+        return (c.statusLive, Icons.check_circle, 'attended ');
       case 'review':
-        return (AppTheme.accent, Icons.bolt, 'reviewed ');
+        return (c.achievement, Icons.bolt, 'reviewed ');
       default:
-        return (AppTheme.primary, Icons.person_add, 'joined ');
+        return (c.pals, Icons.person_add, 'joined ');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final (color, icon, verb) = _style(item.type);
+    final c = AppColors.of(context);
+    final (color, icon, verb) = _style(c, item.type);
 
     void openRace() => Navigator.push(
           context,
@@ -227,7 +234,7 @@ class _TimelineRow extends StatelessWidget {
                   width: 30,
                   height: 30,
                   decoration: BoxDecoration(
-                    color: AppTheme.surfaceLight,
+                    color: c.feedDotBg,
                     shape: BoxShape.circle,
                     border: Border.all(color: color, width: 2),
                   ),
@@ -235,7 +242,7 @@ class _TimelineRow extends StatelessWidget {
                 ),
                 if (!isLast)
                   Expanded(
-                    child: Container(width: 2, color: AppTheme.divider),
+                    child: Container(width: 2, color: c.feedLine),
                   ),
               ],
             ),
@@ -257,9 +264,10 @@ class _TimelineRow extends StatelessWidget {
                         Expanded(
                           child: Text.rich(
                             TextSpan(
-                              style: const TextStyle(
-                                color: AppTheme.textPrimary,
-                                fontSize: AppTheme.fsBody,
+                              style: TextStyle(
+                                fontFamily: AppType.body,
+                                color: c.feedNameText,
+                                fontSize: AppType.base,
                                 height: 1.35,
                               ),
                               children: [
@@ -273,9 +281,9 @@ class _TimelineRow extends StatelessWidget {
                                 TextSpan(text: ' $verb'),
                                 TextSpan(
                                   text: item.raceName,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.w600,
-                                    color: AppTheme.primary,
+                                    color: c.feedLinkText,
                                   ),
                                 ),
                               ],
@@ -285,9 +293,9 @@ class _TimelineRow extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           timeago.format(item.createdAt, locale: 'en_short'),
-                          style: const TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: AppTheme.fsCaption,
+                          style: TextStyle(
+                            color: c.feedTimeText,
+                            fontSize: AppType.sm,
                           ),
                         ),
                       ],
@@ -301,22 +309,21 @@ class _TimelineRow extends StatelessWidget {
                       const SizedBox(height: 6),
                       Container(
                         padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-                        decoration: const BoxDecoration(
-                          color: AppTheme.surface,
-                          borderRadius:
-                              BorderRadius.only(
+                        decoration: BoxDecoration(
+                          color: c.bgSurface,
+                          borderRadius: const BorderRadius.only(
                             topRight: Radius.circular(8),
                             bottomRight: Radius.circular(8),
                           ),
                           border: Border(
-                            left: BorderSide(color: AppTheme.accent, width: 3),
+                            left: BorderSide(color: c.achievement, width: 3),
                           ),
                         ),
                         child: Text(
                           item.reviewBody!,
-                          style: const TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: AppTheme.fsSecondary,
+                          style: TextStyle(
+                            color: c.textSecondary,
+                            fontSize: AppType.sm,
                             height: 1.35,
                           ),
                           maxLines: 3,
@@ -344,6 +351,7 @@ class _PalRequestsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.read<AppProvider>();
+    final c = AppColors.of(context);
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
@@ -356,15 +364,19 @@ class _PalRequestsSheet extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppTheme.divider,
+                  color: c.sheetHandle,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Pal requests',
-              style: TextStyle(fontSize: AppTheme.fsHeading, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                  fontFamily: AppType.heading,
+                  color: c.textPrimary,
+                  fontSize: AppType.xl,
+                  fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 16),
             StreamBuilder<List<Map<String, dynamic>>>(
@@ -372,11 +384,11 @@ class _PalRequestsSheet extends StatelessWidget {
               builder: (context, snap) {
                 final requests = snap.data ?? [];
                 if (requests.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
                     child: Center(
                       child: Text('No pal requests',
-                          style: TextStyle(color: AppTheme.textSecondary)),
+                          style: TextStyle(color: c.textSecondary)),
                     ),
                   );
                 }
@@ -406,6 +418,7 @@ class _RequestTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.read<AppProvider>();
+    final c = AppColors.of(context);
     return FutureBuilder<AppUser?>(
       future: provider.authService.getUser(requesterUid),
       builder: (context, snap) {
@@ -423,8 +436,10 @@ class _RequestTile extends StatelessWidget {
               Expanded(
                 child: Text(
                   user?.displayName ?? 'Runner',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w600, fontSize: AppTheme.fsBody),
+                  style: TextStyle(
+                      color: c.textPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: AppType.base),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -445,21 +460,21 @@ class _RequestTile extends StatelessWidget {
                   }
                 },
                 style: TextButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: Colors.white,
+                  backgroundColor: c.actionBg,
+                  foregroundColor: c.actionText,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(AppRadius.full),
                   ),
                 ),
                 child: const Text('Accept',
                     style: TextStyle(
-                        fontSize: AppTheme.fsSecondary, fontWeight: FontWeight.w600)),
+                        fontSize: AppType.sm, fontWeight: FontWeight.w600)),
               ),
               const SizedBox(width: 6),
               IconButton(
                 tooltip: 'Decline',
-                icon: const Icon(Icons.close, color: AppTheme.textSecondary),
+                icon: Icon(Icons.close, color: c.textTertiary),
                 onPressed: () async {
                   final messenger = ScaffoldMessenger.of(context);
                   try {

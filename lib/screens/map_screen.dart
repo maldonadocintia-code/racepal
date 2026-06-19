@@ -261,12 +261,13 @@ class _MapScreenState extends State<MapScreen> {
     }
     final circles = <Circle>{};
     if (_place != null) {
+      final volt = AppColors.of(context).primary;
       circles.add(Circle(
         circleId: const CircleId('radius'),
         center: LatLng(_place!.lat, _place!.lng),
         radius: _radius * 1609.34,
-        fillColor: AppTheme.primary.withValues(alpha: 0.10),
-        strokeColor: AppTheme.primary.withValues(alpha: 0.6),
+        fillColor: volt.withValues(alpha: 0.10),
+        strokeColor: volt.withValues(alpha: 0.6),
         strokeWidth: 2,
       ));
     }
@@ -285,9 +286,9 @@ class _MapScreenState extends State<MapScreen> {
     final picked = await showModalBottomSheet<UkPlace>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: AppColors.of(context).sheetBg,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
       ),
       builder: (_) => const _LocationPickerSheet(),
     );
@@ -398,6 +399,7 @@ class _MapScreenState extends State<MapScreen> {
             _selectedEvent != null ||
             _selectedRace != null;
 
+        final c = AppColors.of(context);
         return Scaffold(
           floatingActionButton: panelOpen
               ? null
@@ -406,10 +408,13 @@ class _MapScreenState extends State<MapScreen> {
                     context,
                     MaterialPageRoute(builder: (_) => const AddRaceScreen()),
                   ),
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: Colors.white,
+                  backgroundColor: c.fabBg,
+                  foregroundColor: c.fabText,
                   icon: const Icon(Icons.add_location_alt_outlined),
-                  label: const Text('Add new event'),
+                  label: const Text('Add new event',
+                      style: TextStyle(
+                          fontFamily: AppType.body,
+                          fontWeight: FontWeight.w500)),
                 ),
           body: SafeArea(
             bottom: false,
@@ -482,10 +487,11 @@ class _MapScreenState extends State<MapScreen> {
   // ── Header (location + radius + segment + toggle) ────────────────────────────
 
   Widget _header() {
+    final c = AppColors.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppTheme.divider)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: c.divider)),
       ),
       child: Column(
         children: [
@@ -493,38 +499,37 @@ class _MapScreenState extends State<MapScreen> {
           GestureDetector(
             onTap: _openLocationPicker,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: AppTheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.divider),
+                color: c.searchBg,
+                borderRadius: BorderRadius.circular(AppRadius.xl),
+                border: Border.all(color: c.searchBorder),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.location_on_outlined,
-                      color: AppTheme.accent, size: 20),
+                  Icon(Icons.location_on_outlined, color: c.primary, size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _place?.name ?? 'Search a town, city or area',
                       style: TextStyle(
+                        fontFamily: AppType.body,
                         color: _place == null
-                            ? AppTheme.textSecondary
-                            : AppTheme.textPrimary,
-                        fontSize: AppTheme.fsBody,
+                            ? c.searchPlaceholder
+                            : c.searchText,
+                        fontSize: AppType.md,
                         fontWeight:
-                            _place == null ? FontWeight.normal : FontWeight.w700,
+                            _place == null ? FontWeight.normal : FontWeight.w500,
                       ),
                     ),
                   ),
                   if (_place != null)
                     GestureDetector(
                       onTap: _clearPlace,
-                      child: const Icon(Icons.close,
-                          size: 18, color: AppTheme.textSecondary),
+                      child: Icon(Icons.close, size: 18, color: c.searchIcon),
                     )
                   else
-                    const Icon(Icons.search, color: AppTheme.textSecondary),
+                    Icon(Icons.search, color: c.searchIcon),
                 ],
               ),
             ),
@@ -535,13 +540,13 @@ class _MapScreenState extends State<MapScreen> {
             Row(
               children: [
                 Text('Within ${_radius.round()} miles',
-                    style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
+                    style: TextStyle(
+                        color: c.textSecondary, fontSize: AppType.sm)),
               ],
             ),
             SliderTheme(
               data: SliderTheme.of(context).copyWith(
-                trackHeight: 3,
+                trackHeight: 4,
                 overlayShape:
                     const RoundSliderOverlayShape(overlayRadius: 16),
               ),
@@ -551,8 +556,8 @@ class _MapScreenState extends State<MapScreen> {
                 divisions: 49,
                 value: _radius,
                 label: '${_radius.round()} mi',
-                activeColor: AppTheme.primary,
-                inactiveColor: AppTheme.divider,
+                activeColor: c.sliderFill,
+                inactiveColor: c.sliderTrack,
                 onChanged: (v) => setState(() => _radius = v),
                 onChangeEnd: (v) {
                   _rebuild();
@@ -580,6 +585,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Widget _segChip(String label, _Seg value) {
+    final c = AppColors.of(context);
     final selected = _seg == value;
     return GestureDetector(
       onTap: () {
@@ -587,24 +593,26 @@ class _MapScreenState extends State<MapScreen> {
         _rebuild();
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? AppTheme.primary : AppTheme.surface,
-          borderRadius: BorderRadius.circular(20),
+          color: selected ? c.filterActive : c.filterInactive,
+          borderRadius: BorderRadius.circular(AppRadius.full),
           border: Border.all(
-              color: selected ? AppTheme.primary : AppTheme.divider),
+              color: selected ? Colors.transparent : c.filterBorder),
         ),
         child: Text(label,
             style: TextStyle(
-              color: selected ? Colors.white : AppTheme.textSecondary,
-              fontSize: AppTheme.fsSecondary,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
+              fontFamily: AppType.body,
+              color: selected ? c.filterActiveText : c.filterInactiveText,
+              fontSize: AppType.base,
+              fontWeight: selected ? FontWeight.w500 : FontWeight.normal,
             )),
       ),
     );
   }
 
   Widget _viewToggle() {
+    final c = AppColors.of(context);
     return GestureDetector(
       onTap: () {
         setState(() => _isListView = !_isListView);
@@ -613,23 +621,23 @@ class _MapScreenState extends State<MapScreen> {
         }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.divider),
+          color: c.filterInactive,
+          borderRadius: BorderRadius.circular(AppRadius.full),
+          border: Border.all(color: c.filterBorder),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(_isListView ? Icons.map_outlined : Icons.format_list_bulleted,
-                size: 16, color: AppTheme.primary),
+                size: 16, color: c.textPrimary),
             const SizedBox(width: 5),
             Text(_isListView ? 'Map' : 'List',
-                style: const TextStyle(
-                    color: AppTheme.primary,
-                    fontSize: AppTheme.fsSecondary,
-                    fontWeight: FontWeight.w700)),
+                style: TextStyle(
+                    color: c.textPrimary,
+                    fontSize: AppType.sm,
+                    fontWeight: FontWeight.w500)),
           ],
         ),
       ),
@@ -639,9 +647,10 @@ class _MapScreenState extends State<MapScreen> {
   // ── List view ────────────────────────────────────────────────────────────
 
   Widget _listView(List<_Result> results) {
+    final c = AppColors.of(context);
     if (results.isEmpty) {
       return Container(
-        color: AppTheme.background,
+        color: c.bgPrimary,
         alignment: Alignment.topCenter,
         padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
         child: Text(
@@ -649,14 +658,14 @@ class _MapScreenState extends State<MapScreen> {
               ? 'Nothing within ${_radius.round()} miles of ${_place!.name}.\nTry a bigger radius.'
               : 'No upcoming races or parkruns found.',
           textAlign: TextAlign.center,
-          style: const TextStyle(color: AppTheme.textSecondary),
+          style: TextStyle(color: c.textSecondary),
         ),
       );
     }
     return Container(
-      color: AppTheme.background,
+      color: c.bgPrimary,
       child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 100),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
         itemCount: results.length,
         separatorBuilder: (_, __) => const SizedBox(height: 8),
         itemBuilder: (_, i) => _resultTile(results[i]),
@@ -665,34 +674,40 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Widget _resultTile(_Result r) {
+    final c = AppColors.of(context);
     return GestureDetector(
       onTap: r.onSelect,
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppTheme.divider),
+          color: c.bgSurface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: c.border),
         ),
         child: Row(
           children: [
             if (r.distanceMi != null)
               SizedBox(
-                width: 50,
+                width: 48,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       r.distanceMi! < 10
                           ? r.distanceMi!.toStringAsFixed(1)
                           : r.distanceMi!.toStringAsFixed(0),
-                      style: const TextStyle(
-                          color: AppTheme.accent,
-                          fontSize: AppTheme.fsTitle,
+                      style: TextStyle(
+                          fontFamily: AppType.display,
+                          color: c.primary,
+                          fontSize: AppType.xxl,
+                          height: 1.1,
                           fontWeight: FontWeight.w800),
                     ),
-                    const Text('miles',
+                    Text('miles',
                         style: TextStyle(
-                            color: AppTheme.textSecondary, fontSize: 10)),
+                            fontFamily: AppType.body,
+                            color: c.textTertiary,
+                            fontSize: AppType.xs)),
                   ],
                 ),
               )
@@ -702,26 +717,33 @@ class _MapScreenState extends State<MapScreen> {
                 height: 10,
                 margin: const EdgeInsets.only(right: 8),
                 decoration: BoxDecoration(
-                    color: r.isParkrun ? Colors.green : Colors.orange,
+                    color: r.isParkrun ? AppPalette.goGreen : AppPalette.warningAmber,
                     shape: BoxShape.circle),
               ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(r.title,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: AppTheme.fsBody),
+                      style: TextStyle(
+                          fontFamily: AppType.body,
+                          color: c.textPrimary,
+                          fontWeight: FontWeight.w500,
+                          fontSize: AppType.md),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 2),
                   Text(r.dateLabel,
-                      style: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: AppTheme.fsCaption)),
+                      style: TextStyle(
+                          fontFamily: AppType.body,
+                          color: c.textSecondary,
+                          fontSize: AppType.sm)),
                   Text('📍 ${r.address}',
-                      style: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: AppTheme.fsCaption),
+                      style: TextStyle(
+                          fontFamily: AppType.body,
+                          color: c.textTertiary,
+                          fontSize: AppType.sm),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
                 ],
@@ -730,12 +752,13 @@ class _MapScreenState extends State<MapScreen> {
             if (r.rating != null) ...[
               const SizedBox(width: 8),
               Text('★ ${r.rating}',
-                  style: const TextStyle(
-                      color: AppTheme.accent,
-                      fontSize: AppTheme.fsSecondary,
+                  style: TextStyle(
+                      fontFamily: AppType.body,
+                      color: c.achievement,
+                      fontSize: AppType.sm,
                       fontWeight: FontWeight.w700)),
             ],
-            const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+            Icon(Icons.chevron_right, size: 16, color: c.textTertiary),
           ],
         ),
       ),
@@ -823,6 +846,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -839,14 +863,18 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppTheme.divider,
+                color: c.sheetHandle,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           const SizedBox(height: 14),
-          const Text('Search a town, city or area',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: AppTheme.fsTitle)),
+          Text('Search a town, city or area',
+              style: TextStyle(
+                  fontFamily: AppType.heading,
+                  color: c.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: AppType.xl)),
           const SizedBox(height: 12),
           TextField(
             controller: _ctrl,
@@ -862,10 +890,10 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
           const SizedBox(height: 8),
           Flexible(
             child: _results.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
                     child: Text('Type a place to see matches',
-                        style: TextStyle(color: AppTheme.textSecondary)),
+                        style: TextStyle(color: c.textSecondary)),
                   )
                 : ListView.builder(
                     shrinkWrap: true,
@@ -873,9 +901,10 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                     itemBuilder: (_, i) {
                       final p = _results[i];
                       return ListTile(
-                        leading: const Icon(Icons.location_on_outlined,
-                            color: AppTheme.accent),
-                        title: Text(p.name),
+                        leading: Icon(Icons.location_on_outlined,
+                            color: c.primary),
+                        title: Text(p.name,
+                            style: TextStyle(color: c.textPrimary)),
                         onTap: () => Navigator.pop(context, p),
                       );
                     },
@@ -904,10 +933,11 @@ class _ParkrunPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        color: c.sheetBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
         boxShadow: [
           BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 16)
         ],
@@ -920,25 +950,27 @@ class _ParkrunPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              _tag('parkrun', Colors.green),
+              _tag(context, 'parkrun', AppPalette.goGreen),
               const Spacer(),
               IconButton(
                   tooltip: 'Close',
-                  icon: const Icon(Icons.close,
-                      color: AppTheme.textSecondary, size: 20),
+                  icon: Icon(Icons.close, color: c.textTertiary, size: 20),
                   onPressed: onClose),
             ],
           ),
           const SizedBox(height: 4),
           Text('${data['name']} parkrun',
-              style: const TextStyle(
-                  color: AppTheme.textPrimary,
-                  fontWeight: FontWeight.w800,
-                  fontSize: AppTheme.fsDisplay)),
+              style: TextStyle(
+                  fontFamily: AppType.heading,
+                  color: c.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: AppType.xl)),
           const SizedBox(height: 4),
-          _line(Icons.location_on_outlined, data['location'] as String? ?? ''),
+          _line(context, Icons.location_on_outlined,
+              data['location'] as String? ?? ''),
           const SizedBox(height: 4),
-          _line(Icons.calendar_today_outlined, 'Every Saturday · 9:00am'),
+          _line(context, Icons.calendar_today_outlined,
+              'Every Saturday · 9:00am'),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -953,8 +985,8 @@ class _ParkrunPanel extends StatelessWidget {
                 child: OutlinedButton(
                   onPressed: onViewDetails,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.textPrimary,
-                    side: const BorderSide(color: AppTheme.divider),
+                    foregroundColor: c.textPrimary,
+                    side: BorderSide(color: c.border),
                   ),
                   child: const Text('Reviews'),
                 ),
@@ -978,14 +1010,15 @@ class _EventPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final date = DateTime.tryParse(data['startDate'] ?? '');
     final price = data['price'];
     final address = (data['address'] ?? data['city'] ?? '') as String;
 
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        color: c.sheetBg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
         boxShadow: [
           BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 16)
         ],
@@ -998,39 +1031,39 @@ class _EventPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              _tag('Race', Colors.orange),
+              _tag(context, 'Race', c.secondary),
               if (price != null) ...[
                 const SizedBox(width: 8),
                 Text(
                     price is num
                         ? '£${price.toStringAsFixed(0)}'
                         : price.toString(),
-                    style: const TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: AppTheme.fsCaption,
+                    style: TextStyle(
+                        color: c.textSecondary,
+                        fontSize: AppType.sm,
                         fontWeight: FontWeight.w600)),
               ],
               const Spacer(),
               IconButton(
                   tooltip: 'Close',
-                  icon: const Icon(Icons.close,
-                      color: AppTheme.textSecondary, size: 20),
+                  icon: Icon(Icons.close, color: c.textTertiary, size: 20),
                   onPressed: onClose),
             ],
           ),
           const SizedBox(height: 4),
           Text(data['name'] ?? '',
-              style: const TextStyle(
-                  color: AppTheme.textPrimary,
-                  fontWeight: FontWeight.w800,
-                  fontSize: AppTheme.fsDisplay),
+              style: TextStyle(
+                  fontFamily: AppType.heading,
+                  color: c.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: AppType.xl),
               maxLines: 2,
               overflow: TextOverflow.ellipsis),
           const SizedBox(height: 4),
-          _line(Icons.location_on_outlined, address),
+          _line(context, Icons.location_on_outlined, address),
           if (date != null) ...[
             const SizedBox(height: 4),
-            _line(Icons.calendar_today_outlined,
+            _line(context, Icons.calendar_today_outlined,
                 DateFormat('EEE d MMM yyyy').format(date)),
           ],
           const SizedBox(height: 16),
@@ -1053,8 +1086,8 @@ class _EventPanel extends StatelessWidget {
                     }
                   },
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.textPrimary,
-                    side: const BorderSide(color: AppTheme.divider),
+                    foregroundColor: c.textPrimary,
+                    side: BorderSide(color: c.border),
                   ),
                   child: const Text('Website'),
                 ),
@@ -1082,12 +1115,13 @@ class _RacePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          color: c.sheetBg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
           boxShadow: [
             BoxShadow(
                 color: Colors.black.withValues(alpha: 0.4), blurRadius: 16)
@@ -1101,43 +1135,43 @@ class _RacePanel extends StatelessWidget {
           children: [
             Row(
               children: [
-                _tag(race.type, AppTheme.accent),
+                _tag(context, race.type, c.secondary),
                 const SizedBox(width: 8),
                 if (race.lightningBolt)
-                  const Text('⚡', style: TextStyle(fontSize: AppTheme.fsTitle)),
+                  const Text('⚡', style: TextStyle(fontSize: AppType.md)),
                 const Spacer(),
                 IconButton(
                     tooltip: 'Close',
-                    icon: const Icon(Icons.close,
-                        color: AppTheme.textSecondary, size: 20),
+                    icon: Icon(Icons.close, color: c.textTertiary, size: 20),
                     onPressed: onClose),
               ],
             ),
             const SizedBox(height: 4),
             Text(race.name,
-                style: const TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontWeight: FontWeight.w800,
-                    fontSize: AppTheme.fsDisplay)),
+                style: TextStyle(
+                    fontFamily: AppType.heading,
+                    color: c.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: AppType.xl)),
             const SizedBox(height: 4),
-            _line(Icons.location_on_outlined, race.location),
+            _line(context, Icons.location_on_outlined, race.location),
             const SizedBox(height: 4),
             Row(
               children: [
-                const Icon(Icons.calendar_today_outlined,
-                    size: 14, color: AppTheme.textSecondary),
+                Icon(Icons.calendar_today_outlined,
+                    size: 14, color: c.textSecondary),
                 const SizedBox(width: 4),
                 Text(DateFormat('EEE d MMM yyyy').format(race.date),
-                    style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
+                    style: TextStyle(
+                        color: c.textSecondary, fontSize: AppType.sm)),
                 if (race.reviewCount > 0) ...[
                   const SizedBox(width: 12),
-                  const Icon(Icons.star, size: 14, color: AppTheme.accent),
+                  Icon(Icons.star, size: 14, color: c.achievement),
                   const SizedBox(width: 2),
                   Text(
                     '${race.averageRating.toStringAsFixed(1)} (${race.reviewCount})',
-                    style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary),
+                    style: TextStyle(
+                        color: c.textSecondary, fontSize: AppType.sm),
                   ),
                 ],
               ],
@@ -1156,8 +1190,8 @@ class _RacePanel extends StatelessWidget {
                   child: OutlinedButton(
                     onPressed: onTap,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.textPrimary,
-                      side: const BorderSide(color: AppTheme.divider),
+                      foregroundColor: c.textPrimary,
+                      side: BorderSide(color: c.border),
                     ),
                     child: const Text('View details'),
                   ),
@@ -1173,28 +1207,30 @@ class _RacePanel extends StatelessWidget {
 
 // ── Shared small widgets for the panels ─────────────────────────────────────
 
-Widget _tag(String label, Color color) => Container(
+Widget _tag(BuildContext context, String label, Color color) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(label,
           style: TextStyle(
-              color: color, fontSize: AppTheme.fsCaption, fontWeight: FontWeight.w600)),
+              color: color, fontSize: AppType.sm, fontWeight: FontWeight.w600)),
     );
 
-Widget _line(IconData icon, String text) => Row(
-      children: [
-        Icon(icon, size: 14, color: AppTheme.textSecondary),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(text,
-              style:
-                  const TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis),
-        ),
-      ],
-    );
+Widget _line(BuildContext context, IconData icon, String text) {
+  final c = AppColors.of(context);
+  return Row(
+    children: [
+      Icon(icon, size: 14, color: c.textSecondary),
+      const SizedBox(width: 4),
+      Expanded(
+        child: Text(text,
+            style: TextStyle(color: c.textSecondary, fontSize: AppType.sm),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis),
+      ),
+    ],
+  );
+}

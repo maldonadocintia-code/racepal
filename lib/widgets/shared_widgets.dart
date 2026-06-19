@@ -24,6 +24,7 @@ class LightningRating extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     if (interactive) {
       return Row(
         mainAxisSize: MainAxisSize.min,
@@ -39,7 +40,7 @@ class LightningRating extends StatelessWidget {
                 child: Icon(
                   Icons.bolt,
                   size: size,
-                  color: filled ? AppTheme.accent : AppTheme.surfaceLight,
+                  color: filled ? c.achievement : c.border,
                 ),
               ),
             ),
@@ -55,7 +56,7 @@ class LightningRating extends StatelessWidget {
         return Icon(
           Icons.bolt,
           size: size,
-          color: filled ? AppTheme.accent : AppTheme.surfaceLight,
+          color: filled ? c.achievement : c.border,
         );
       }),
     );
@@ -78,6 +79,7 @@ class UserAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     if (photoUrl != null && photoUrl!.isNotEmpty) {
       return CircleAvatar(
         radius: radius,
@@ -86,12 +88,13 @@ class UserAvatar extends StatelessWidget {
     }
     return CircleAvatar(
       radius: radius,
-      backgroundColor: AppTheme.primary,
+      backgroundColor: c.avatarBg,
       child: Text(
         displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
         style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
+          fontFamily: AppType.display,
+          color: c.avatarText,
+          fontWeight: FontWeight.w800,
           fontSize: radius * 0.9,
         ),
       ),
@@ -115,14 +118,15 @@ class RaceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.divider),
+          color: c.bgSurface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: c.border),
         ),
         child: Padding(
           padding: EdgeInsets.all(compact ? 12 : 16),
@@ -131,13 +135,13 @@ class RaceCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  _typeBadge(),
+                  _typeBadge(c),
                   const Spacer(),
                   Text(
                     DateFormat('EEE d MMM').format(race.date),
-                    style: const TextStyle(
-                      color: AppTheme.textSecondary,
-                      fontSize: AppTheme.fsCaption,
+                    style: TextStyle(
+                      color: c.textSecondary,
+                      fontSize: AppType.sm,
                     ),
                   ),
                 ],
@@ -146,22 +150,23 @@ class RaceCard extends StatelessWidget {
               Text(
                 race.name,
                 style: TextStyle(
-                  color: AppTheme.textPrimary,
+                  fontFamily: AppType.heading,
+                  color: c.textPrimary,
                   fontWeight: FontWeight.w700,
-                  fontSize: compact ? 15 : 17,
+                  fontSize: compact ? AppType.md : AppType.lg,
                 ),
               ),
               const SizedBox(height: 4),
               Row(
                 children: [
-                  const Icon(Icons.location_on, size: 14, color: AppTheme.textSecondary),
+                  Icon(Icons.location_on, size: 14, color: c.textSecondary),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       race.location,
-                      style: const TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: AppTheme.fsSecondary,
+                      style: TextStyle(
+                        color: c.textSecondary,
+                        fontSize: AppType.sm,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -176,22 +181,22 @@ class RaceCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Text(
                       '${race.averageRating.toStringAsFixed(1)} (${race.reviewCount})',
-                      style: const TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: AppTheme.fsCaption,
+                      style: TextStyle(
+                        color: c.textSecondary,
+                        fontSize: AppType.sm,
                       ),
                     ),
                     const Spacer(),
                     if (race.attendeeCount > 0)
                       Row(
                         children: [
-                          const Icon(Icons.people, size: 14, color: AppTheme.textSecondary),
+                          Icon(Icons.people, size: 14, color: c.textSecondary),
                           const SizedBox(width: 4),
                           Text(
                             '${race.attendeeCount} going',
-                            style: const TextStyle(
-                              color: AppTheme.textSecondary,
-                              fontSize: AppTheme.fsCaption,
+                            style: TextStyle(
+                              color: c.textSecondary,
+                              fontSize: AppType.sm,
                             ),
                           ),
                         ],
@@ -206,19 +211,16 @@ class RaceCard extends StatelessWidget {
     );
   }
 
-  Widget _typeBadge() {
+  Widget _typeBadge(AppColors c) {
     final isParkrun = race.isParkrun;
+    // parkrun = green (brand convention), race = cyan (light-safe in both modes).
+    final color = isParkrun ? AppPalette.goGreen : c.secondary;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: isParkrun
-            ? AppTheme.primary.withOpacity(0.2)
-            : AppTheme.accent.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isParkrun ? AppTheme.primary : AppTheme.accent,
-          width: 0.8,
-        ),
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(AppRadius.full),
+        border: Border.all(color: color, width: 0.8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -226,14 +228,14 @@ class RaceCard extends StatelessWidget {
           Icon(
             isParkrun ? Icons.bolt : Icons.flag,
             size: 12,
-            color: isParkrun ? AppTheme.primary : AppTheme.accent,
+            color: color,
           ),
           const SizedBox(width: 4),
           Text(
             race.type,
             style: TextStyle(
-              color: isParkrun ? AppTheme.primary : AppTheme.accent,
-              fontSize: AppTheme.fsCaption,
+              color: color,
+              fontSize: AppType.sm,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -263,12 +265,13 @@ class ReviewTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceLight,
-        borderRadius: BorderRadius.circular(14),
+        color: c.bgSurfaceHigh,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -287,17 +290,18 @@ class ReviewTile extends StatelessWidget {
                   children: [
                     Text(
                       review.userName,
-                      style: const TextStyle(
+                      style: TextStyle(
+                        color: c.textPrimary,
                         fontWeight: FontWeight.w600,
-                        fontSize: AppTheme.fsBody,
+                        fontSize: AppType.base,
                       ),
                     ),
                     if (review.finishTime != null)
                       Text(
                         '⏱ ${review.finishTime}',
-                        style: const TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: AppTheme.fsCaption,
+                        style: TextStyle(
+                          color: c.textSecondary,
+                          fontSize: AppType.sm,
                         ),
                       ),
                   ],
@@ -305,32 +309,32 @@ class ReviewTile extends StatelessWidget {
               ),
               LightningRating(rating: review.rating, size: 16),
               if (!review.isPublic)
-                const Padding(
-                  padding: EdgeInsets.only(left: 6),
-                  child: Icon(Icons.lock, size: 14, color: AppTheme.textSecondary),
+                Padding(
+                  padding: const EdgeInsets.only(left: 6),
+                  child: Icon(Icons.lock, size: 14, color: c.textTertiary),
                 ),
               if (_isOwner)
                 PopupMenuButton<_ReviewAction>(
                   tooltip: 'Review options',
-                  icon: const Icon(Icons.more_vert,
-                      size: 20, color: AppTheme.textSecondary),
-                  color: AppTheme.surface,
+                  icon: Icon(Icons.more_vert, size: 20, color: c.textTertiary),
+                  color: c.bgSurfaceHigh,
                   onSelected: (action) {
                     if (action == _ReviewAction.edit) onEdit?.call();
                     if (action == _ReviewAction.delete) _confirmDelete(context);
                   },
-                  itemBuilder: (_) => const [
+                  itemBuilder: (_) => [
                     PopupMenuItem(
                       value: _ReviewAction.edit,
                       child: Row(
                         children: [
-                          Icon(Icons.edit_outlined, size: 16, color: AppTheme.textPrimary),
-                          SizedBox(width: 10),
-                          Text('Edit review'),
+                          Icon(Icons.edit_outlined,
+                              size: 16, color: c.textPrimary),
+                          const SizedBox(width: 10),
+                          const Text('Edit review'),
                         ],
                       ),
                     ),
-                    PopupMenuItem(
+                    const PopupMenuItem(
                       value: _ReviewAction.delete,
                       child: Row(
                         children: [
@@ -349,7 +353,7 @@ class ReviewTile extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               review.body!,
-              style: const TextStyle(color: AppTheme.textPrimary, fontSize: AppTheme.fsBody),
+              style: TextStyle(color: c.textPrimary, fontSize: AppType.base),
             ),
           ],
         ],
@@ -358,14 +362,15 @@ class ReviewTile extends StatelessWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
+    final c = AppColors.of(context);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: c.bgSurfaceHigh,
         title: const Text('Delete review?'),
-        content: const Text(
+        content: Text(
           'This will permanently remove your review.',
-          style: TextStyle(color: AppTheme.textSecondary),
+          style: TextStyle(color: c.textSecondary),
         ),
         actions: [
           TextButton(
@@ -385,7 +390,7 @@ class ReviewTile extends StatelessWidget {
 
 enum _ReviewAction { edit, delete }
 
-// ── Follow button ─────────────────────────────────────────────────────────
+// ── Pal button ─────────────────────────────────────────────────────────────
 
 class PalButton extends StatelessWidget {
   final PalStatus status;
@@ -399,13 +404,14 @@ class PalButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     OutlinedButton outlined(String label, {Color? fg}) => OutlinedButton(
           onPressed: onPressed,
           style: OutlinedButton.styleFrom(
-            foregroundColor: fg ?? AppTheme.textPrimary,
-            side: const BorderSide(color: AppTheme.divider),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            foregroundColor: fg ?? c.textPrimary,
+            side: BorderSide(color: fg ?? c.border),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.full)),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           ),
           child: Text(label),
@@ -414,10 +420,10 @@ class PalButton extends StatelessWidget {
         ElevatedButton(
           onPressed: onPressed,
           style: ElevatedButton.styleFrom(
-            backgroundColor: bg ?? AppTheme.primary,
-            foregroundColor: fg ?? Colors.white,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            backgroundColor: bg ?? c.actionBg,
+            foregroundColor: fg ?? c.actionText,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.full)),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           ),
           child: Text(label),
@@ -425,12 +431,11 @@ class PalButton extends StatelessWidget {
 
     switch (status) {
       case PalStatus.pals:
-        return outlined('Pals ✓');
+        return outlined('Pals ✓', fg: c.pals);
       case PalStatus.requested:
-        return outlined('Requested', fg: AppTheme.textSecondary);
+        return outlined('Requested', fg: c.textSecondary);
       case PalStatus.incoming:
-        return filled('Accept pal',
-            bg: AppTheme.accent, fg: AppTheme.background);
+        return filled('Accept pal');
       case PalStatus.none:
         return filled('Add pal');
       case PalStatus.self:

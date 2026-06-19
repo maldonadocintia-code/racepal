@@ -15,6 +15,7 @@ class PalsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.read<AppProvider>();
+    final c = AppColors.of(context);
     final isMe = provider.currentUser?.uid == uid;
 
     return Scaffold(
@@ -43,8 +44,8 @@ class PalsScreen extends StatelessWidget {
           return ListView.separated(
             padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: pals.length,
-            separatorBuilder: (_, __) => const Divider(
-                height: 1, color: AppTheme.divider, indent: 72),
+            separatorBuilder: (_, __) =>
+                Divider(height: 1, color: c.divider, indent: 72),
             itemBuilder: (_, i) => _PalTile(user: pals[i]),
           );
         },
@@ -52,24 +53,25 @@ class PalsScreen extends StatelessWidget {
     );
   }
 
-  Widget _empty(BuildContext context, bool isMe) => Center(
+  Widget _empty(BuildContext context, bool isMe) {
+    final c = AppColors.of(context);
+    return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.people_outline,
-                  size: 48, color: AppTheme.textSecondary),
+              Icon(Icons.people_outline, size: 48, color: c.textTertiary),
               const SizedBox(height: 12),
               Text(
-                isMe ? 'No pals yet.' : 'No pals yet.',
-                style: const TextStyle(color: AppTheme.textSecondary),
+                'No pals yet.',
+                style: TextStyle(color: c.textSecondary),
               ),
               if (isMe) ...[
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Find runners and send a pal request.\nWhen they accept, they appear here.',
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary),
+                  style: TextStyle(color: c.textSecondary, fontSize: AppType.sm),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
@@ -86,6 +88,7 @@ class PalsScreen extends StatelessWidget {
           ),
         ),
       );
+  }
 }
 
 class _PalTile extends StatelessWidget {
@@ -94,6 +97,7 @@ class _PalTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       leading: UserAvatar(
@@ -102,17 +106,18 @@ class _PalTile extends StatelessWidget {
         radius: 24,
       ),
       title: Text(user.displayName,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: AppTheme.fsBody)),
+          style: TextStyle(
+              color: c.textPrimary,
+              fontWeight: FontWeight.w600,
+              fontSize: AppType.base)),
       subtitle: user.bio != null && user.bio!.isNotEmpty
           ? Text(user.bio!,
-              style: const TextStyle(
-                  color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary),
+              style: TextStyle(color: c.textSecondary, fontSize: AppType.sm),
               maxLines: 1,
               overflow: TextOverflow.ellipsis)
           : Text('${user.racesCount} race${user.racesCount == 1 ? '' : 's'}',
-              style: const TextStyle(
-                  color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
-      trailing: const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+              style: TextStyle(color: c.textSecondary, fontSize: AppType.sm)),
+      trailing: Icon(Icons.chevron_right, color: c.textTertiary),
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => ProfileScreen(uid: user.uid)),
@@ -165,6 +170,7 @@ class _FindPalsScreenState extends State<FindPalsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Find pals')),
       body: Column(
@@ -179,46 +185,42 @@ class _FindPalsScreenState extends State<FindPalsScreen> {
               onChanged: _search,
               decoration: InputDecoration(
                 hintText: 'Search by name...',
-                prefixIcon:
-                    const Icon(Icons.search, color: AppTheme.textSecondary),
+                prefixIcon: Icon(Icons.search, color: c.searchIcon),
                 filled: true,
-                fillColor: AppTheme.surface,
+                fillColor: c.searchBg,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
                   borderSide: BorderSide.none,
                 ),
               ),
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             child: Text(
               'Tip: names are matched from the start — try the first few letters.',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsCaption),
+              style: TextStyle(color: c.textTertiary, fontSize: AppType.sm),
             ),
           ),
           Expanded(
             child: _searching
                 ? const Center(child: CircularProgressIndicator())
                 : !_searched
-                    ? const Center(
+                    ? Center(
                         child: Text('Search for runners by name',
-                            style: TextStyle(color: AppTheme.textSecondary)),
+                            style: TextStyle(color: c.textSecondary)),
                       )
                     : _results.isEmpty
-                        ? const Center(
+                        ? Center(
                             child: Text('No runners found with that name',
-                                style:
-                                    TextStyle(color: AppTheme.textSecondary)),
+                                style: TextStyle(color: c.textSecondary)),
                           )
                         : ListView.separated(
                             padding:
                                 const EdgeInsets.symmetric(vertical: 8),
                             itemCount: _results.length,
-                            separatorBuilder: (_, __) => const Divider(
-                                height: 1,
-                                color: AppTheme.divider,
-                                indent: 72),
+                            separatorBuilder: (_, __) => Divider(
+                                height: 1, color: c.divider, indent: 72),
                             itemBuilder: (ctx, i) =>
                                 _FoundUserTile(user: _results[i]),
                           ),
@@ -276,6 +278,7 @@ class _FoundUserTileState extends State<_FoundUserTile> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       leading: UserAvatar(
@@ -284,11 +287,13 @@ class _FoundUserTileState extends State<_FoundUserTile> {
         radius: 24,
       ),
       title: Text(widget.user.displayName,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: AppTheme.fsBody)),
+          style: TextStyle(
+              color: c.textPrimary,
+              fontWeight: FontWeight.w600,
+              fontSize: AppType.base)),
       subtitle: widget.user.bio != null && widget.user.bio!.isNotEmpty
           ? Text(widget.user.bio!,
-              style: const TextStyle(
-                  color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary),
+              style: TextStyle(color: c.textSecondary, fontSize: AppType.sm),
               maxLines: 1,
               overflow: TextOverflow.ellipsis)
           : null,

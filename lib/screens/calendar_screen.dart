@@ -10,9 +10,6 @@ import '../theme.dart';
 import '../widgets/plan_add_sheet.dart';
 import 'race_detail_screen.dart';
 
-/// Mine = purple (theme primary), Pals = teal.
-const Color _palColor = Color(0xFF22D3EE);
-
 /// A race on the calendar, with whether it's mine and which pals are going.
 class _Entry {
   final Race race;
@@ -41,6 +38,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AppProvider>();
+    final c = AppColors.of(context);
     final uid = provider.currentUser!.uid;
     final palUids = provider.palUids;
 
@@ -61,23 +59,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
         children: [
           // Colour legend — replaces the old Me / Me+Pals tabs
           Container(
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppTheme.divider)),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: c.divider)),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               children: [
-                _legendDot(AppTheme.primary),
+                _legendDot(c.calDotMine),
                 const SizedBox(width: 6),
-                const Text('Mine',
+                Text('Mine',
                     style: TextStyle(
-                        color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
+                        color: c.textSecondary, fontSize: AppType.sm)),
                 const SizedBox(width: 18),
-                _legendDot(_palColor),
+                _legendDot(c.calDotPals),
                 const SizedBox(width: 6),
-                const Text('Pals',
+                Text('Pals',
                     style: TextStyle(
-                        color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
+                        color: c.textSecondary, fontSize: AppType.sm)),
               ],
             ),
           ),
@@ -91,8 +89,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _legendDot(Color c) =>
-      Container(width: 9, height: 9, decoration: BoxDecoration(color: c, shape: BoxShape.circle));
+  Widget _legendDot(Color c) => Container(
+      width: 9, height: 9, decoration: BoxDecoration(color: c, shape: BoxShape.circle));
 }
 
 // ── Shared data loader ───────────────────────────────────────────────────────
@@ -161,13 +159,14 @@ Widget _entriesLoader(
 
 // ── Pal avatars + shared row ─────────────────────────────────────────────────
 
-Widget _palAvatar(AppUser u, {double r = 12}) {
+Widget _palAvatar(BuildContext context, AppUser u, {double r = 12}) {
+  final c = AppColors.of(context);
   if (u.photoUrl != null && u.photoUrl!.isNotEmpty) {
     return CircleAvatar(radius: r, backgroundImage: NetworkImage(u.photoUrl!));
   }
   return CircleAvatar(
     radius: r,
-    backgroundColor: _palColor,
+    backgroundColor: c.pals,
     child: Text(
       u.displayName.isNotEmpty ? u.displayName[0].toUpperCase() : '?',
       style: TextStyle(
@@ -184,8 +183,9 @@ String _palLabel(List<AppUser> pals) {
 }
 
 Widget _entryRow(BuildContext context, _Entry e) {
+  final c = AppColors.of(context);
   final mine = e.mine;
-  final borderColor = mine ? AppTheme.primary : _palColor;
+  final borderColor = mine ? c.planBarMine : c.planBarPals;
   final hasReview = e.race.isPast && e.race.reviewCount > 0;
 
   return GestureDetector(
@@ -197,13 +197,13 @@ Widget _entryRow(BuildContext context, _Entry e) {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(14),
+        color: c.bgSurface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border(
           left: BorderSide(color: borderColor, width: 4),
-          top: BorderSide(color: AppTheme.divider),
-          right: BorderSide(color: AppTheme.divider),
-          bottom: BorderSide(color: AppTheme.divider),
+          top: BorderSide(color: c.border),
+          right: BorderSide(color: c.border),
+          bottom: BorderSide(color: c.border),
         ),
       ),
       child: Row(
@@ -213,14 +213,16 @@ Widget _entryRow(BuildContext context, _Entry e) {
             child: Column(
               children: [
                 Text(DateFormat('MMM').format(e.race.date).toUpperCase(),
-                    style: const TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 10,
+                    style: TextStyle(
+                        color: c.textTertiary,
+                        fontSize: AppType.xs,
                         fontWeight: FontWeight.w600)),
                 Text(DateFormat('d').format(e.race.date),
-                    style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontSize: AppTheme.fsDisplay,
+                    style: TextStyle(
+                        fontFamily: AppType.display,
+                        color: c.textPrimary,
+                        fontSize: AppType.xxl,
+                        height: 1.1,
                         fontWeight: FontWeight.w800)),
               ],
             ),
@@ -231,28 +233,28 @@ Widget _entryRow(BuildContext context, _Entry e) {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(e.race.name,
-                    style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontWeight: FontWeight.w700,
-                        fontSize: AppTheme.fsBody)),
+                    style: TextStyle(
+                        color: c.textPrimary,
+                        fontWeight: FontWeight.w500,
+                        fontSize: AppType.md)),
                 const SizedBox(height: 2),
                 Text(e.race.location,
-                    style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: AppTheme.fsCaption)),
+                    style: TextStyle(
+                        color: c.textSecondary, fontSize: AppType.sm)),
                 if (e.pals.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Row(
                     children: [
                       ...e.pals.take(3).map((p) => Padding(
                             padding: const EdgeInsets.only(right: 4),
-                            child: _palAvatar(p, r: 11),
+                            child: _palAvatar(context, p, r: 11),
                           )),
                       const SizedBox(width: 4),
                       Flexible(
                         child: Text(_palLabel(e.pals),
-                            style: const TextStyle(
-                                color: _palColor,
-                                fontSize: 11,
+                            style: TextStyle(
+                                color: c.pals,
+                                fontSize: AppType.sm,
                                 fontWeight: FontWeight.w600),
                             overflow: TextOverflow.ellipsis),
                       ),
@@ -266,35 +268,47 @@ Widget _entryRow(BuildContext context, _Entry e) {
             hasReview
                 ? Row(
                     children: [
-                      const Icon(Icons.star, size: 13, color: AppTheme.accent),
+                      Icon(Icons.star, size: 13, color: c.achievement),
                       const SizedBox(width: 2),
                       Text(e.race.averageRating.toStringAsFixed(1),
-                          style: const TextStyle(
-                              color: AppTheme.accent,
-                              fontSize: AppTheme.fsSecondary,
+                          style: TextStyle(
+                              color: c.achievement,
+                              fontSize: AppType.sm,
                               fontWeight: FontWeight.w700)),
                     ],
                   )
-                : _statusChip(e.myStatus)
+                : _statusChip(context, e.myStatus)
           else
-            _miniTag('Pal', _palColor),
+            _miniTag('Pal', c.pals),
         ],
       ),
     ),
   );
 }
 
-Widget _statusChip(AttendanceStatus? status) {
-  final label = status == AttendanceStatus.attended
-      ? 'Done'
-      : status == AttendanceStatus.interested
-          ? 'Interested'
-          : 'Going';
-  final color = status == AttendanceStatus.attended
-      ? Colors.green
-      : status == AttendanceStatus.interested
-          ? AppTheme.textSecondary
-          : AppTheme.primary;
+Widget _statusChip(BuildContext context, AttendanceStatus? status) {
+  final c = AppColors.of(context);
+  // "Going" uses the dedicated going-badge tokens (light-safe); other states
+  // fall back to a single readable colour.
+  if (status == null || status == AttendanceStatus.going) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: c.goingBg,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: c.goingBorder),
+      ),
+      child: Text('Going',
+          style: TextStyle(
+              color: c.goingText,
+              fontSize: AppType.sm,
+              fontWeight: FontWeight.w600)),
+    );
+  }
+  final label =
+      status == AttendanceStatus.attended ? 'Done' : 'Interested';
+  final color =
+      status == AttendanceStatus.attended ? c.statusLive : c.textSecondary;
   return _miniTag(label, color);
 }
 
@@ -302,12 +316,12 @@ Widget _miniTag(String label, Color color) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(label,
           style: TextStyle(
-              color: color, fontSize: AppTheme.fsCaption, fontWeight: FontWeight.w600)),
+              color: color, fontSize: AppType.sm, fontWeight: FontWeight.w600)),
     );
 
 // ── List view ────────────────────────────────────────────────────────────────
@@ -319,6 +333,7 @@ class _ListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     return _entriesLoader(context, uid, palUids, (entries) {
       if (entries.isEmpty) {
         return Center(
@@ -326,7 +341,7 @@ class _ListView extends StatelessWidget {
             palUids.isEmpty
                 ? 'No races added yet.\nBrowse Explore, or switch to Month view and tap a day to add one.'
                 : 'No races yet — yours or your pals\'.',
-            style: const TextStyle(color: AppTheme.textSecondary),
+            style: TextStyle(color: c.textSecondary),
             textAlign: TextAlign.center,
           ),
         );
@@ -340,11 +355,11 @@ class _ListView extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         children: [
           if (upcoming.isNotEmpty) ...[
-            _sectionHeader('Upcoming'),
+            _sectionHeader(context, 'Upcoming'),
             ...upcoming.map((e) => _entryRow(context, e)),
           ],
           if (past.isNotEmpty) ...[
-            _sectionHeader('Past'),
+            _sectionHeader(context, 'Past'),
             ...past.map((e) => _entryRow(context, e)),
           ],
         ],
@@ -352,14 +367,14 @@ class _ListView extends StatelessWidget {
     });
   }
 
-  Widget _sectionHeader(String title) => Padding(
+  Widget _sectionHeader(BuildContext context, String title) => Padding(
         padding: const EdgeInsets.fromLTRB(0, 12, 0, 6),
-        child: Text(title,
-            style: const TextStyle(
-                color: AppTheme.textSecondary,
-                fontSize: AppTheme.fsCaption,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.8)),
+        child: Text(title.toUpperCase(),
+            style: TextStyle(
+                color: AppColors.of(context).feedSectionLabel,
+                fontSize: AppType.xs,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 2)),
       );
 }
 
@@ -396,112 +411,121 @@ class _MonthCalendarState extends State<_MonthCalendar> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AppColors.of(context);
     final entries = widget.entries;
     final events = <DateTime, List<_Entry>>{};
-      for (final e in entries) {
-        final day =
-            DateTime(e.race.date.year, e.race.date.month, e.race.date.day);
-        (events[day] ??= []).add(e);
-      }
-      final sel =
-          DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
-      final selectedEntries = events[sel] ?? [];
+    for (final e in entries) {
+      final day =
+          DateTime(e.race.date.year, e.race.date.month, e.race.date.day);
+      (events[day] ??= []).add(e);
+    }
+    final sel = DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
+    final selectedEntries = events[sel] ?? [];
 
-      return Column(
-        children: [
-          TableCalendar<_Entry>(
-            firstDay: DateTime(2020),
-            lastDay: DateTime(2030),
-            focusedDay: _focusedDay,
-            selectedDayPredicate: (d) => isSameDay(d, _selectedDay),
-            startingDayOfWeek: StartingDayOfWeek.monday,
-            eventLoader: (day) =>
-                events[DateTime(day.year, day.month, day.day)] ?? [],
-            calendarBuilders: CalendarBuilders(
-              markerBuilder: (ctx, day, dayEntries) {
-                if (dayEntries.isEmpty) return null;
-                final hasMine = dayEntries.any((e) => e.mine);
-                final hasPals = dayEntries.any((e) => e.pals.isNotEmpty);
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (hasMine) _dot(AppTheme.primary),
-                    if (hasMine && hasPals) const SizedBox(width: 3),
-                    if (hasPals) _dot(_palColor),
-                  ],
-                );
-              },
-            ),
-            onDaySelected: (selected, focused) => setState(() {
-              _selectedDay = selected;
-              _focusedDay = focused;
-            }),
-            onPageChanged: (focused) => setState(() => _focusedDay = focused),
-            calendarStyle: CalendarStyle(
-              todayDecoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.4),
-                  shape: BoxShape.circle),
-              selectedDecoration: const BoxDecoration(
-                  color: AppTheme.primary, shape: BoxShape.circle),
-              defaultTextStyle: const TextStyle(color: AppTheme.textPrimary),
-              weekendTextStyle: const TextStyle(color: AppTheme.textPrimary),
-              outsideTextStyle: const TextStyle(color: AppTheme.textSecondary),
-            ),
-            headerStyle: const HeaderStyle(
-              formatButtonVisible: false,
-              titleCentered: true,
-              titleTextStyle: TextStyle(
-                  color: AppTheme.textPrimary, fontWeight: FontWeight.w700),
-              leftChevronIcon:
-                  Icon(Icons.chevron_left, color: AppTheme.textPrimary),
-              rightChevronIcon:
-                  Icon(Icons.chevron_right, color: AppTheme.textPrimary),
-            ),
+    return Column(
+      children: [
+        TableCalendar<_Entry>(
+          firstDay: DateTime(2020),
+          lastDay: DateTime(2030),
+          focusedDay: _focusedDay,
+          selectedDayPredicate: (d) => isSameDay(d, _selectedDay),
+          startingDayOfWeek: StartingDayOfWeek.monday,
+          eventLoader: (day) =>
+              events[DateTime(day.year, day.month, day.day)] ?? [],
+          calendarBuilders: CalendarBuilders(
+            markerBuilder: (ctx, day, dayEntries) {
+              if (dayEntries.isEmpty) return null;
+              final hasMine = dayEntries.any((e) => e.mine);
+              final hasPals = dayEntries.any((e) => e.pals.isNotEmpty);
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (hasMine) _dot(c.calDotMine),
+                  if (hasMine && hasPals) const SizedBox(width: 3),
+                  if (hasPals) _dot(c.calDotPals),
+                ],
+              );
+            },
           ),
-          const Divider(height: 1, color: AppTheme.divider),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              children: [
-                _addButton(context, _selectedDay),
-                const SizedBox(height: 12),
-                if (selectedEntries.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Text('Nothing planned on this day yet.',
-                        style: TextStyle(color: AppTheme.textSecondary)),
-                  )
-                else
-                  ...selectedEntries.map((e) => _entryRow(context, e)),
-              ],
-            ),
+          onDaySelected: (selected, focused) => setState(() {
+            _selectedDay = selected;
+            _focusedDay = focused;
+          }),
+          onPageChanged: (focused) => setState(() => _focusedDay = focused),
+          calendarStyle: CalendarStyle(
+            todayDecoration:
+                BoxDecoration(color: c.calSelected, shape: BoxShape.circle),
+            todayTextStyle: TextStyle(color: c.calSelectedText),
+            selectedDecoration:
+                BoxDecoration(color: c.calToday, shape: BoxShape.circle),
+            selectedTextStyle: TextStyle(
+                color: c.calTodayText, fontWeight: FontWeight.w600),
+            defaultTextStyle: TextStyle(color: c.textPrimary),
+            weekendTextStyle: TextStyle(color: c.textPrimary),
+            outsideTextStyle: TextStyle(color: c.textTertiary),
           ),
-        ],
-      );
-  }
-
-  Widget _addButton(BuildContext context, DateTime date) => GestureDetector(
-        onTap: () => showPlanAddSheet(context, date),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 13),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.primary),
+          headerStyle: HeaderStyle(
+            formatButtonVisible: false,
+            titleCentered: true,
+            titleTextStyle: TextStyle(
+                fontFamily: AppType.heading,
+                color: c.textPrimary,
+                fontWeight: FontWeight.w700),
+            leftChevronIcon: Icon(Icons.chevron_left, color: c.textPrimary),
+            rightChevronIcon: Icon(Icons.chevron_right, color: c.textPrimary),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          daysOfWeekStyle: DaysOfWeekStyle(
+            weekdayStyle: TextStyle(color: c.textSecondary),
+            weekendStyle: TextStyle(color: c.textSecondary),
+          ),
+        ),
+        Divider(height: 1, color: c.divider),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             children: [
-              const Icon(Icons.add, size: 18, color: AppTheme.primary),
-              const SizedBox(width: 6),
-              Text('Add a race on ${DateFormat('d MMM').format(date)}',
-                  style: const TextStyle(
-                      color: AppTheme.primary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: AppTheme.fsBody)),
+              _addButton(context, _selectedDay),
+              const SizedBox(height: 12),
+              if (selectedEntries.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Text('Nothing planned on this day yet.',
+                      style: TextStyle(color: c.textSecondary)),
+                )
+              else
+                ...selectedEntries.map((e) => _entryRow(context, e)),
             ],
           ),
         ),
-      );
+      ],
+    );
+  }
+
+  Widget _addButton(BuildContext context, DateTime date) {
+    final c = AppColors.of(context);
+    return GestureDetector(
+      onTap: () => showPlanAddSheet(context, date),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: c.textLink, width: 1.5),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add, size: 18, color: c.textLink),
+            const SizedBox(width: 6),
+            Text('Add a race on ${DateFormat('d MMM').format(date)}',
+                style: TextStyle(
+                    color: c.textLink,
+                    fontWeight: FontWeight.w600,
+                    fontSize: AppType.base)),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _dot(Color color) => Container(
       width: 7,

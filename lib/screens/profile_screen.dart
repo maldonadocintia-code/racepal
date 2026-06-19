@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/app_provider.dart';
+import '../services/theme_controller.dart';
 import '../models/user_model.dart';
 import '../models/race_model.dart';
 import '../models/review_model.dart';
@@ -45,6 +46,7 @@ class _ProfileBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.read<AppProvider>();
+    final c = AppColors.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -81,16 +83,18 @@ class _ProfileBody extends StatelessWidget {
                   const SizedBox(height: 12),
                   Text(
                     user.displayName,
-                    style: const TextStyle(
-                      fontSize: AppTheme.fsDisplay,
-                      fontWeight: FontWeight.w800,
+                    style: TextStyle(
+                      fontFamily: AppType.heading,
+                      color: c.textPrimary,
+                      fontSize: AppType.xl,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   if (user.bio != null && user.bio!.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
                       user.bio!,
-                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsBody),
+                      style: TextStyle(color: c.textSecondary, fontSize: AppType.base),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -171,45 +175,54 @@ class _ProfileBody extends StatelessWidget {
   }
 
   // Privacy policy link + account deletion (GDPR + Play Store requirement).
-  Widget _accountSection(BuildContext context, AppProvider provider) => Padding(
+  Widget _accountSection(BuildContext context, AppProvider provider) {
+    final c = AppColors.of(context);
+    return Padding(
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const Divider(),
+            const SizedBox(height: 12),
+            _ThemeSelector(),
+            const SizedBox(height: 12),
             const Divider(),
             const SizedBox(height: 8),
             TextButton.icon(
-              icon: const Icon(Icons.privacy_tip_outlined,
-                  size: 18, color: AppTheme.textSecondary),
-              label: const Text('Privacy policy',
-                  style: TextStyle(color: AppTheme.textSecondary)),
+              icon: Icon(Icons.privacy_tip_outlined,
+                  size: 18, color: c.textSecondary),
+              label: Text('Privacy policy',
+                  style: TextStyle(color: c.textSecondary)),
               onPressed: () => launchUrl(
                 Uri.parse(AppConstants.privacyPolicyUrl),
                 mode: LaunchMode.externalApplication,
               ),
             ),
             TextButton.icon(
-              icon: const Icon(Icons.delete_forever_outlined,
-                  size: 18, color: Colors.redAccent),
-              label: const Text('Delete account',
-                  style: TextStyle(color: Colors.redAccent)),
+              icon: Icon(Icons.delete_forever_outlined,
+                  size: 18, color: c.statusError),
+              label: Text('Delete account',
+                  style: TextStyle(color: c.statusError)),
               onPressed: () => _confirmDeleteAccount(context, provider),
             ),
           ],
         ),
       );
+  }
 
   Future<void> _confirmDeleteAccount(
       BuildContext context, AppProvider provider) async {
+    final c = AppColors.of(context);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: c.bgSurfaceHigh,
         title: const Text('Delete your account?'),
-        content: const Text(
+        content: Text(
           'This permanently deletes your profile, photo, reviews, race history, '
           'pals and activity. This cannot be undone.\n\n'
           'You\'ll be asked to sign in again to confirm it\'s you.',
-          style: TextStyle(color: AppTheme.textSecondary, fontSize: AppTheme.fsBody),
+          style: TextStyle(color: c.textSecondary, fontSize: AppType.base),
         ),
         actions: [
           TextButton(
@@ -249,33 +262,42 @@ class _ProfileBody extends StatelessWidget {
     }
   }
 
-  Widget _stat(String label, String value) => Column(
-    children: [
-      Text(value,
-          style: const TextStyle(
-            fontSize: AppTheme.fsDisplay,
-            fontWeight: FontWeight.w800,
-            color: AppTheme.textPrimary,
-          )),
-      Text(label,
-          style: const TextStyle(
-            fontSize: AppTheme.fsCaption,
-            color: AppTheme.textSecondary,
-          )),
-    ],
+  Widget _stat(String label, String value) => Builder(
+    builder: (context) {
+      final c = AppColors.of(context);
+      return Column(
+        children: [
+          Text(value,
+              style: TextStyle(
+                fontFamily: AppType.display,
+                fontSize: AppType.xxl,
+                fontWeight: FontWeight.w800,
+                color: c.textPrimary,
+              )),
+          Text(label,
+              style: TextStyle(
+                fontSize: AppType.sm,
+                color: c.textSecondary,
+              )),
+        ],
+      );
+    },
   );
 
-  Widget _statDivider() => Container(
-    height: 30,
-    width: 1,
-    color: AppTheme.divider,
+  Widget _statDivider() => Builder(
+    builder: (context) => Container(
+      height: 30,
+      width: 1,
+      color: AppColors.of(context).divider,
+    ),
   );
 
   Future<void> _confirmLogout(BuildContext context, AppProvider provider) async {
+    final c = AppColors.of(context);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: c.bgSurfaceHigh,
         title: const Text('Sign out?'),
         actions: [
           TextButton(
@@ -290,6 +312,50 @@ class _ProfileBody extends StatelessWidget {
       ),
     );
     if (confirm == true) await provider.signOut();
+  }
+}
+
+/// Appearance picker (System / Light / Dark) backed by [ThemeController].
+class _ThemeSelector extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final controller = context.watch<ThemeController>();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Appearance',
+            style: TextStyle(
+                fontFamily: AppType.body,
+                color: c.textSecondary,
+                fontSize: AppType.sm,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.8)),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: SegmentedButton<ThemeMode>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(
+                  value: ThemeMode.system,
+                  label: Text('System'),
+                  icon: Icon(Icons.brightness_auto_outlined, size: 18)),
+              ButtonSegment(
+                  value: ThemeMode.light,
+                  label: Text('Light'),
+                  icon: Icon(Icons.light_mode_outlined, size: 18)),
+              ButtonSegment(
+                  value: ThemeMode.dark,
+                  label: Text('Dark'),
+                  icon: Icon(Icons.dark_mode_outlined, size: 18)),
+            ],
+            selected: {controller.mode},
+            onSelectionChanged: (s) => controller.setMode(s.first),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -355,9 +421,9 @@ class _UserRacesScreen extends StatelessWidget {
           }
           final atts = snap.data ?? [];
           if (atts.isEmpty) {
-            return const Center(
+            return Center(
               child: Text('No races yet.',
-                  style: TextStyle(color: AppTheme.textSecondary)),
+                  style: TextStyle(color: AppColors.of(context).textSecondary)),
             );
           }
           return FutureBuilder<List<_RaceWithStatus>>(
@@ -394,17 +460,21 @@ class _UserRacesScreen extends StatelessWidget {
     );
   }
 
-  Widget _header(String t) => Padding(
-        padding: const EdgeInsets.fromLTRB(0, 8, 0, 6),
-        child: Text(t,
-            style: const TextStyle(
-                color: AppTheme.textSecondary,
-                fontSize: AppTheme.fsCaption,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.8)),
+  Widget _header(String t) => Builder(
+        builder: (context) => Padding(
+          padding: const EdgeInsets.fromLTRB(0, 8, 0, 6),
+          child: Text(t.toUpperCase(),
+              style: TextStyle(
+                  color: AppColors.of(context).feedSectionLabel,
+                  fontSize: AppType.xs,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 2)),
+        ),
       );
 
-  Widget _raceRow(BuildContext context, Race race) => GestureDetector(
+  Widget _raceRow(BuildContext context, Race race) {
+    final c = AppColors.of(context);
+    return GestureDetector(
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(
@@ -414,9 +484,9 @@ class _UserRacesScreen extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppTheme.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppTheme.divider),
+            color: c.bgSurface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: c.border),
           ),
           child: Row(
             children: [
@@ -425,31 +495,34 @@ class _UserRacesScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(race.name,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: AppTheme.fsBody)),
+                        style: TextStyle(
+                            color: c.textPrimary,
+                            fontWeight: FontWeight.w500,
+                            fontSize: AppType.md)),
                     const SizedBox(height: 2),
                     Text(
                         '${DateFormat('EEE d MMM yyyy').format(race.date)} · ${race.location}',
-                        style: const TextStyle(
-                            color: AppTheme.textSecondary, fontSize: AppTheme.fsCaption),
+                        style: TextStyle(
+                            color: c.textSecondary, fontSize: AppType.sm),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),
               if (race.reviewCount > 0) ...[
-                const Icon(Icons.star, size: 13, color: AppTheme.accent),
+                Icon(Icons.star, size: 13, color: c.achievement),
                 const SizedBox(width: 2),
                 Text(race.averageRating.toStringAsFixed(1),
-                    style: const TextStyle(
-                        color: AppTheme.accent,
-                        fontSize: AppTheme.fsSecondary,
+                    style: TextStyle(
+                        color: c.achievement,
+                        fontSize: AppType.sm,
                         fontWeight: FontWeight.w700)),
               ],
             ],
           ),
         ),
       );
+  }
 }
 
 // ── A user's reviews ───────────────────────────────────────────────────────
@@ -471,10 +544,11 @@ class _UserReviewsScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           final reviews = snap.data ?? [];
+          final c = AppColors.of(context);
           if (reviews.isEmpty) {
-            return const Center(
+            return Center(
               child: Text('No reviews yet.',
-                  style: TextStyle(color: AppTheme.textSecondary)),
+                  style: TextStyle(color: c.textSecondary)),
             );
           }
           return ListView.builder(
@@ -492,9 +566,9 @@ class _UserReviewsScreen extends StatelessWidget {
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppTheme.surface,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppTheme.divider),
+                    color: c.bgSurface,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    border: Border.all(color: c.border),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -503,8 +577,10 @@ class _UserReviewsScreen extends StatelessWidget {
                         future: provider.raceService.getRace(rv.raceId),
                         builder: (ctx, rs) => Text(
                           rs.data?.name ?? 'Race',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: AppTheme.fsBody),
+                          style: TextStyle(
+                              color: c.textPrimary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: AppType.md),
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -512,8 +588,8 @@ class _UserReviewsScreen extends StatelessWidget {
                       if (rv.body != null && rv.body!.isNotEmpty) ...[
                         const SizedBox(height: 6),
                         Text(rv.body!,
-                            style: const TextStyle(
-                                color: AppTheme.textSecondary, fontSize: AppTheme.fsSecondary)),
+                            style: TextStyle(
+                                color: c.textSecondary, fontSize: AppType.sm)),
                       ],
                     ],
                   ),

@@ -2,7 +2,7 @@ name: racepal
 description: UK Race & Parkrun social calendar
 
 publish_to: 'none'
-version: 0.2.19+20
+version: 0.2.20+21
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -51,3 +51,14 @@ flutter:
     - assets/parkruns_uk.json
     - assets/manchester_races.json
     - assets/uk_places.json
+  fonts:
+    - family: BarlowCondensed
+      fonts:
+        - asset: assets/fonts/BarlowCondensed-ExtraBold.ttf
+          weight: 800
+    # Space Grotesk ships as a variable font (weight axis 300–700). Flutter
+    # selects the weight from the requested fontWeight, so one file covers
+    # Regular (400), Medium (500) and Bold (700).
+    - family: SpaceGrotesk
+      fonts:
+        - asset: assets/fonts/SpaceGrotesk-Variable.ttf
