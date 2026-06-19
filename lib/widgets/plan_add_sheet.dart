@@ -15,8 +15,9 @@ import '../screens/add_race_screen.dart';
 /// it, an "add manually" fallback opens the full form with the date pre-filled.
 ///
 /// Date handling: parkruns are added on the tapped [date] (you pick which
-/// Saturday by tapping it). A known race keeps its own fixed date — tapping a
-/// date is just how you start the search.
+/// Saturday by tapping it). A fixed-date race (bundled or community) can only
+/// be added on the day it actually takes place — if the tapped [date] doesn't
+/// match, the race is shown disabled with a hint pointing at its real date.
 Future<void> showPlanAddSheet(BuildContext context, DateTime date) async {
   final message = await showModalBottomSheet<String>(
     context: context,
@@ -57,6 +58,16 @@ class _Known {
   });
 
   bool get isParkrun => kind == _Kind.parkrun;
+
+  /// A fixed-date race can only be added on the calendar day it takes place.
+  /// Parkruns have no fixed date (they take whichever Saturday you tapped), so
+  /// they're always addable.
+  bool addableOn(DateTime tapped) {
+    if (fixedDate == null) return true;
+    return fixedDate!.year == tapped.year &&
+        fixedDate!.month == tapped.month &&
+        fixedDate!.day == tapped.day;
+  }
 }
 
 class _PlanAddSheet extends StatefulWidget {
@@ -157,7 +168,7 @@ class _PlanAddSheetState extends State<_PlanAddSheet> {
   }
 
   Future<void> _add(_Known k) async {
-    if (_saving) return;
+    if (_saving || !k.addableOn(widget.date)) return;
     setState(() => _saving = true);
     final provider = context.read<AppProvider>();
 
@@ -335,40 +346,57 @@ class _PlanAddSheetState extends State<_PlanAddSheet> {
 
   Widget _resultTile(_Known k) {
     final c = AppColors.of(context);
+    // A fixed-date race can only be added on the day it takes place. When the
+    // tapped day doesn't match, the race stays visible but disabled, with a
+    // hint telling the user which date to go to.
+    final addable = k.addableOn(widget.date);
     // parkrun = green, race = cyan (matches the rest of the app, light-safe).
     final color = k.isParkrun ? AppPalette.goGreen : c.secondary;
     final sub = k.isParkrun
         ? 'Parkrun · ${k.location}'
-        : '${DateFormat('EEE d MMM yyyy').format(k.fixedDate!)} · ${k.location}';
+        : addable
+            ? '${DateFormat('EEE d MMM yyyy').format(k.fixedDate!)} · ${k.location}'
+            : 'Only addable on ${DateFormat('EEE d MMM yyyy').format(k.fixedDate!)}';
+    final titleColor =
+        addable ? c.textPrimary : c.textPrimary.withValues(alpha: 0.4);
+    final subColor =
+        addable ? c.textSecondary : c.textLink.withValues(alpha: 0.8);
     return ListTile(
+      enabled: addable && !_saving,
       contentPadding: const EdgeInsets.symmetric(horizontal: 2),
       leading: CircleAvatar(
         radius: 16,
-        backgroundColor: color.withValues(alpha: 0.18),
+        backgroundColor: color.withValues(alpha: addable ? 0.18 : 0.08),
         child: Icon(
           k.isParkrun ? Icons.directions_run : Icons.flag_outlined,
           size: 17,
-          color: color,
+          color: addable ? color : color.withValues(alpha: 0.45),
         ),
       ),
       title: Text(k.name,
           style: TextStyle(
-              color: c.textPrimary,
+              color: titleColor,
               fontWeight: FontWeight.w600,
               fontSize: AppType.base),
           maxLines: 1,
           overflow: TextOverflow.ellipsis),
       subtitle: Text(sub,
-          style: TextStyle(color: c.textSecondary, fontSize: AppType.sm),
+          style: TextStyle(
+              color: subColor,
+              fontSize: AppType.sm,
+              fontWeight: addable ? FontWeight.w400 : FontWeight.w600),
           maxLines: 1,
           overflow: TextOverflow.ellipsis),
-      trailing: _saving
-          ? const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2))
-          : Icon(Icons.add_circle, color: c.primary),
-      onTap: _saving ? null : () => _add(k),
+      trailing: !addable
+          ? Icon(Icons.event_busy_outlined,
+              size: 18, color: c.textSecondary.withValues(alpha: 0.6))
+          : _saving
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : Icon(Icons.add_circle, color: c.primary),
+      onTap: (!addable || _saving) ? null : () => _add(k),
     );
   }
 }
