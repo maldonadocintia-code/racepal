@@ -10,6 +10,35 @@ Legend: 👤 = you do it · 🤖 = ask Claude to do it · ⚠️ = important
 
 ## 0. One-time costs
 - **Google Play developer account: $25, one-time.** The only cost. Everything else is free.
+- **iOS is deliberately not shipped** — see "iPhone / web users" below. (Apple's program is $99/year, recurring, with no free tier — avoided.)
+
+---
+
+## iPhone / web users (no Apple $99/yr)
+
+**Decision (June 2026): launch the first closed test Android-only; do NOT pay for iOS.**
+
+Why this is fine for a *social* app: the pals graph lives in **Firestore**, not on the device. Any client that talks to the same Firebase project shares one graph/Feed/reviews — platform never splits the *data*, only which *client* a person can run.
+
+**There is no free native-iOS path:**
+- TestFlight requires the **$99/year Apple Developer Program**.
+- Xcode free-sideloading expires after **7 days** + needs a Mac/cable per device — impractical for testers.
+
+**The free workaround when iPhone users are actually needed: a Flutter Web / PWA build.**
+1. `flutter build web` → host on **Firebase Hosting** (free tier, already in the project).
+2. iPhone users open the URL in Safari → **Share → Add to Home Screen** → full-screen app icon (PWA). No App Store, no Apple account, **$0**.
+3. Same Firebase backend → iPhone web users and Android native users are **fully connected as pals**.
+
+Effort, not money — an **M** task with caveats:
+- **Google Sign-In on web** needs separate config (web client ID + authorized domains).
+- **Maps**: `google_maps_flutter` doesn't run cleanly on web → on web, default to the **existing list view and hide the map toggle** (discovery works fine as a list; no new billing).
+- Flutter web is heavier/less polished → needs its own test pass.
+- iOS web push needs iOS 16.4+ *and* Home-Screen install — irrelevant while push is deferred.
+
+**Sequencing:**
+- **Now:** Android-only closed test (you pick the tester list — recruit Android users, sidestep the problem). $0.
+- **Next, if an iPhone user must be included / when opening up:** ship the Flutter-web PWA. Still $0.
+- **Only if it gains real traction:** native iOS via the $99/yr Apple program.
 
 ---
 
@@ -53,16 +82,14 @@ flutter build appbundle --release
 
 ---
 
-## 3. Host the privacy policy (free) 👤
-The policy lives at `docs/privacy.html`. To publish it on GitHub Pages:
-1. On GitHub: **Settings → Pages**.
-2. Source: **Deploy from a branch**, Branch: **master**, Folder: **/docs**. Save.
-3. After a minute it's live at:
+## 3. Host the privacy policy (free) ✅ DONE
+The policy lives at `docs/privacy.html` and is **live on GitHub Pages** (enabled
+2026-06-19, source: branch **master**, folder **/docs**):
    **https://maldonadocintia-code.github.io/racepal/privacy.html**
    (this URL is already wired into the app's login + profile links).
-4. ⚠️ **Edit `docs/privacy.html`** and replace the highlighted placeholders:
-   - `[YOUR FULL NAME]` — the data controller (you).
-   - `[YOUR CONTACT EMAIL]` — a real email you'll monitor for deletion requests.
+Placeholders are filled in — data controller **Cintia Maldonado**, contact
+**cinmal1988@gmail.com**. Any future edit to `docs/privacy.html` auto-redeploys
+on push to `master`.
 
 ---
 
@@ -136,7 +163,7 @@ Fill the IARC questionnaire honestly:
 - ✅ In-app **account deletion** (Me tab → Delete account) — wipes profile, photo,
   reviews, race history, Pals, activity, then the auth account.
 - ✅ **Consent notice** + Privacy Policy link on the login screen.
-- ✅ **Privacy Policy** page (`docs/privacy.html`) — needs your name + email filled in.
+- ✅ **Privacy Policy** page (`docs/privacy.html`) — name + email filled in, **live on GitHub Pages**.
 - ✅ **Firebase Analytics dropped** (no analytics-consent burden).
 - ✅ **Release signing config** wired to `key.properties`.
 - ✅ Firestore **rule** for self-deletion of the user doc (needs deploy — step 4).

@@ -164,7 +164,7 @@ attendances/{uid}_{raceId}
   userId, raceId, status (going/attended/interested), ...
 
 reviews/{reviewId}
-  raceId, userId, rating, body, recommend, isPublic (legacy — always written true; reviews are public)
+  raceId, userId, rating, body, recommend  (all reviews are public to any signed-in user; the dead isPublic field was removed)
 
 users/{uid}
   displayName, photoUrl, bio, createdAt, palsMigrated
@@ -198,6 +198,24 @@ follows/, follow_requests/          # LEGACY — read-only (migration source onl
 
 ---
 
+## Costs — running RacePals (target: $0/month)
+
+The user's hard constraint: **the app must not cost money to run.** As scoped (Manchester, Android-only closed test), the ongoing cost is **$0/month**. Verified June 2026.
+
+| Item | Cost | Notes |
+|---|---|---|
+| Google Play | **$25 one-time** | Already accepted. No renewal. |
+| Apple App Store / iOS | **$99/year recurring** | **Deliberately skipped.** No free native-iOS path exists (even TestFlight needs the $99/yr program; Xcode free-sideload expires after 7 days — impractical). iPhone users are served by a free web/PWA build instead (see PLAY_STORE_LAUNCH.md "iPhone / web users"). |
+| Google Maps (Android native) | **$0, unlimited** | "Mobile Native Dynamic Maps" SKU is free. **Do not** switch map providers — Google native is free and best. Don't call billable SKUs (Geocoding/Places/Directions); location search uses bundled `uk_places.json`. |
+| Firebase Auth / Firestore / Storage | **$0 at this scale** | Spark (free) plan covers a closed test easily. |
+| Firebase **Crashlytics** | **$0** | Free on Spark. Recommended add for the beta (crash visibility). |
+| In-app **feedback link** | **$0** | Just a `mailto:` / Google Form link. Recommended add for the beta. |
+| Push notifications (FCM) | **$0 to send**, but… | FCM is free/unlimited. *Event-triggered* push (e.g. "new pal request") needs a **Cloud Function**, which requires the **Blaze** plan — a credit card on file. Free tier (2M invocations/mo) means $0 in practice, but it's not a hard cap by default. **Deferred for MVP.** If added: set a Cloud Billing budget alert + cap. |
+
+**Bottom line:** ongoing cost is **$0/month**; only spend is the $25 Play one-off. The single recurring cost in the whole stack (iOS, $99/yr) is intentionally avoided. The only thing that would put a credit card on file is event-driven push, which is deferred.
+
+---
+
 ## GDPR & Play Store launch (in progress)
 
 Goal: ship to the **Play Store closed-testing** track for feedback. See **`PLAY_STORE_LAUNCH.md`** for the full step-by-step.
@@ -205,16 +223,17 @@ Goal: ship to the **Play Store closed-testing** track for feedback. See **`PLAY_
 **Done in code (this session, not yet released):**
 - **Account deletion** (GDPR erasure) — Me tab → *Delete account*. `AuthService.deleteAccount`/`reauthenticateWithGoogle`, orchestrated by `AppProvider.deleteAccount`. Re-auths via Google, then wipes reviews, attendances, activity, pals (both mirror docs), pal requests, profile photo, user doc, then the auth account. Uses **individual deletes** (not batches) to respect the batch-delete-of-missing-doc gotcha.
 - **Sign-up consent** — login screen shows a Privacy Policy notice/link (`flutter/gestures` `TapGestureRecognizer`); profile has Privacy Policy + Delete account links. Replaced the stale "No Play Store needed" line.
-- **Privacy policy** — `docs/privacy.html` (host on GitHub Pages from /docs). ⚠️ Has `[YOUR FULL NAME]` + `[YOUR CONTACT EMAIL]` placeholders to fill.
+- **Privacy policy** — `docs/privacy.html`, **live on GitHub Pages** at https://maldonadocintia-code.github.io/racepal/privacy.html (source: master `/docs`, enabled 2026-06-19). Controller name/email filled in (Cintia Maldonado / cinmal1988@gmail.com). Wording describes all reviews as public.
 - **Firebase Analytics dropped** — removed from `android/app/build.gradle.kts` (no analytics-consent burden). It was never in pubspec.
 - **Release signing** — `build.gradle.kts` now reads `android/key.properties` (gitignored) for a real release `signingConfig`, falling back to debug signing when absent. **Keystore not yet generated** — the user owns that (password = permanent). `AppConstants.privacyPolicyUrl` added.
 
-**Pending (user/console actions — see PLAY_STORE_LAUNCH.md):** generate keystore + `key.properties`; `flutter build appbundle`; enable GitHub Pages + fill policy placeholders; **deploy Firestore rules** (new `users` self-delete rule — production); create Play dev account ($25); upload `.aab`; Data Safety + content rating + listing.
+**Pending (user/console actions — see PLAY_STORE_LAUNCH.md):** generate keystore + `key.properties`; `flutter build appbundle`; **deploy Firestore rules** (new `users` self-delete rule — production); create Play dev account ($25); upload `.aab`; Data Safety + content rating + listing. (Privacy policy hosting ✅ done — live on GitHub Pages.)
 
 **Decisions:** closed testing (not full launch); full client-side deletion (no Cloud Function); Google-only sign-in for launch, email/password as a fast-follow; passkeys parked (needs a paid backend).
 
 ## Release history (recent)
 
+- **Unreleased (on `master`, not yet built/tagged)** — Privacy-policy hosting + reviews-public cleanup: **GitHub Pages enabled** so `docs/privacy.html` is now live (the in-app link previously 404'd); policy reworded so reviews are described as public; the vestigial `Review.isPublic` field (always-true, never read) removed from the model + all review call sites (profile `isPublic` untouched). `flutter analyze` clean.
 - **Unreleased (in code on `master`, not yet built/tagged)** — Race-detail review & attendance fixes: (1) **"Who's going (N)"** count is now live off the attendee stream — the stored `attendeeCount` field was never written, so it always showed 0; (2) **dropped the everyone/pals-only review split** — all reviews are public to any signed-in user, the visibility radio is gone, the `reviews` query is a plain `where raceId==` sorted client-side (no composite index dependency, which was silently hiding reviews), and **`reviews` read rule changed to `if isSignedIn()`**; (3) **review count** shown as "Reviews (N)"; (4) **`All · Pals` review filter** + "Pal" badge + pals-first ordering. ⚠️ **Requires `firebase deploy --only firestore:rules` before/with the release** — client depends on the new read rule. ⚠️ Existing "Pals only" reviews become visible to everyone once deployed.
 - **v0.2.24** — **Explore distance filter** (BACKLOG #3). Option A "filters in a sheet" redesign of the Explore header: location pill + **Filters** button (active-count badge) + Map/List toggle on one row, with a removable active-filter chip strip below. The radius slider, **Type** (All/Parkruns/Races) and new **Distance** (Any/5K/10K/10 mile/Half/Marathon/Ultra) live in a bottom sheet with a live "Show N results" button + Reset. New `lib/utils/distance.dart` (`DistanceBucket`, `bucketsFor()`) parses **multi-distance** events ("5K / 10K / Half" matches all three; "Half Marathon"→Half). Parkruns classed as 5K (single flag `_distAppliesToParkruns`). Result tiles show a distance badge. Unbucketed types (5-mile, Trail, Triathlon, Other) only appear under "Any". Client-side only — no Firestore/rules changes.
 - **v0.2.23** — Two things: (1) **User-created parkrun venues** — if a parkrun isn't in `parkruns_uk.json`, "Add it manually" under the parkrun picker creates a shared *venue* (no date) in the new `parkrunVenues` collection; all users see it merged into both parkrun pickers (`add_race_screen.dart`, `plan_add_sheet.dart`) and pick their own Saturday. `RaceService.addParkrunVenue`/`parkrunVenues`; venue ids `prv_<docId>`, per-date races `prv_<docId>_<yyyyMMdd>`. **Requires the new `parkrunVenues` Firestore rule deployed** to function. Not yet on the Explore map (manual form collects no lat/lng). (2) **AAA rating/achievement pink** in both themes — dark `#FF3CAC`→`#FF8AD0` (7.6:1), light `#C0006A`→`#A8005C` (7.45:1).
@@ -270,7 +289,7 @@ gh release create v0.2.x-beta "build/app/outputs/flutter-apk/app-arm64-v8a-relea
 - **`lightningBolt`** — `recommendPercent >= 0.8` AND `reviewCount >= 10`. ⚡ badge.
 - **`AttendanceStatus`** lives in `lib/models/review_model.dart` (not race_model).
 - **No Play Store** — sideloaded APK via GitHub Releases.
-- **Maps billing** — list view loads zero tiles; map view costs ~$0.007/load. Free tier $200/mo.
+- **Maps billing** — the native Android SDK map (`google_maps_flutter`) uses the **"Mobile Native Dynamic Maps" SKU, which is $0 with unlimited usage** — map loads on Android are **free**. (The old "~$0.007/load / $200 free tier" note was wrong: that's the *web* JavaScript Maps SKU, which the app doesn't use. The $200 monthly credit was also scrapped in the March 2025 pricing change and replaced with per-SKU free caps — irrelevant here since the mobile SKU is free.) Location search uses the bundled `uk_places.json` gazetteer, **not** the billable Geocoding/Places APIs — keep it that way. List view still loads zero tiles, but the map view is free too. See the **Costs** section below.
 
 ---
 
