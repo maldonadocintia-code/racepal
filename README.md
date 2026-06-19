@@ -170,7 +170,8 @@ attendances/{userId_raceId}
 
 reviews/{reviewId}
   raceId, userId, userName, userPhotoUrl
-  rating (1-5), body, finishTime, isPublic (true=Everyone, false=Pals only), createdAt
+  rating (1-5), body, finishTime, recommend, createdAt
+  (reviews are public to all signed-in users; legacy isPublic always written true)
 
 pals/{ownerUid_otherUid}        # two mirrored docs per friendship
   ownerUid, otherUid, createdAt

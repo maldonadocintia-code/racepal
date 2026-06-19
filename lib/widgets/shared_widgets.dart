@@ -250,6 +250,7 @@ class RaceCard extends StatelessWidget {
 class ReviewTile extends StatelessWidget {
   final Review review;
   final String? currentUserId;
+  final bool isPal;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
@@ -257,6 +258,7 @@ class ReviewTile extends StatelessWidget {
     super.key,
     required this.review,
     this.currentUserId,
+    this.isPal = false,
     this.onEdit,
     this.onDelete,
   });
@@ -307,12 +309,25 @@ class ReviewTile extends StatelessWidget {
                   ],
                 ),
               ),
-              LightningRating(rating: review.rating, size: 16),
-              if (!review.isPublic)
-                Padding(
-                  padding: const EdgeInsets.only(left: 6),
-                  child: Icon(Icons.lock, size: 14, color: c.textTertiary),
+              if (isPal) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: c.palBadgeBg,
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                  ),
+                  child: Text(
+                    'Pal',
+                    style: TextStyle(
+                      color: c.palBadgeText,
+                      fontSize: AppType.xs,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
+                const SizedBox(width: 8),
+              ],
+              LightningRating(rating: review.rating, size: 16),
               if (_isOwner)
                 PopupMenuButton<_ReviewAction>(
                   tooltip: 'Review options',

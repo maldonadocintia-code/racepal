@@ -81,7 +81,7 @@ A single **symmetric friendship**. No more one-directional follows, no follower/
 | `lib/screens/calendar_screen.dart` | **Plan**. Defaults to **month** view so tap-to-add is discoverable. Colour-coded: mine (purple) + pals (teal, with avatars). Tap a day → day panel with **"Add a race on \<date>"** → `showPlanAddSheet`. |
 | `lib/widgets/plan_add_sheet.dart` | **Tap-a-date add sheet** (v0.2.12). Search bundled curated races + parkruns + **user-created** Firestore races (`createdBy != 'system'`); tap to add to your calendar. Parkruns use the **tapped date**; known races keep their **own fixed date**. "Add it manually" → `AddRaceScreen(initialDate: date)`. |
 | `lib/screens/add_race_screen.dart` | Create a race (Race tab, optional `initialDate`) or add a parkrun (Parkrun tab). Title **"Add new event"**; manual submit "Add event". |
-| `lib/screens/race_detail_screen.dart` | Race detail — attendance (Going/Attended/Not going), reviews. Review visibility radio: **Everyone / Pals only**. Parkruns use venue doc `pr_<id>` + Saturday picker. Shows pals who are going (`palService.getPals`). |
+| `lib/screens/race_detail_screen.dart` | Race detail — attendance (Going/Attended/Not going), reviews. **Reviews are public to all signed-in users** (the everyone/pals-only split was dropped). Live counts: **"Who's going (N)"** and **"Reviews (N)"** both derive from their streams. Reviews have an **`All · Pals` filter** (shown once a pal has reviewed): All sorts your review first, then pals' (with a teal "Pal" badge), then everyone else; Pals narrows to just your pals. Parkruns use venue doc `pr_<id>` + Saturday picker. Shows pals who are going (`palService.getPals`). |
 | `lib/widgets/parkrun_helpers.dart` | Shared parkrun Saturday-picker + `planParkrunDate()`. |
 | `lib/screens/feed_screen.dart` | Feed from `provider.palUids` (+ self). Bell → `_PalRequestsSheet` (incoming requests, Accept/Decline). |
 | `lib/screens/profile_screen.dart` | Profile — photo, bio, **tappable stats Races/Pals/Reviews**. Pal button (`_PalButtonWidget`) for other users. (No "recent activity" — removed v0.2.12 as it duplicated the Feed; no private-account label — public/private dropped v0.2.13.) |
@@ -164,7 +164,7 @@ attendances/{uid}_{raceId}
   userId, raceId, status (going/attended/interested), ...
 
 reviews/{reviewId}
-  raceId, userId, rating, body, recommend, isPublic (true = Everyone, false = Pals only)
+  raceId, userId, rating, body, recommend, isPublic (legacy — always written true; reviews are public)
 
 users/{uid}
   displayName, photoUrl, bio, createdAt, palsMigrated
@@ -188,7 +188,7 @@ follows/, follow_requests/          # LEGACY — read-only (migration source onl
 
 - **users**: read if signed-in; create/update/delete by owner only (no cross-user count writes any more).
 - **races**: creator edits; any signed-in user may update aggregate stat fields only.
-- **reviews**: visible if `isPublic == true`, owner, or `isPal(author)`; create by self; edit/delete by owner.
+- **reviews**: readable by any signed-in user (the everyone/pals-only split was dropped); create by self; edit/delete by owner.
 - **pals**: read if signed-in; create/delete if you're either party in the doc (`ownerUid` or `otherUid`).
 - **pal_requests**: read if signed-in and you're `fromUid`/`toUid` (with `resource == null ||` guard for status checks); create if `fromUid == you`; delete if you're either party.
 - **follows / follow_requests**: read-only (`allow write: if false`) — kept for migration.
@@ -215,6 +215,7 @@ Goal: ship to the **Play Store closed-testing** track for feedback. See **`PLAY_
 
 ## Release history (recent)
 
+- **Unreleased (in code on `master`, not yet built/tagged)** — Race-detail review & attendance fixes: (1) **"Who's going (N)"** count is now live off the attendee stream — the stored `attendeeCount` field was never written, so it always showed 0; (2) **dropped the everyone/pals-only review split** — all reviews are public to any signed-in user, the visibility radio is gone, the `reviews` query is a plain `where raceId==` sorted client-side (no composite index dependency, which was silently hiding reviews), and **`reviews` read rule changed to `if isSignedIn()`**; (3) **review count** shown as "Reviews (N)"; (4) **`All · Pals` review filter** + "Pal" badge + pals-first ordering. ⚠️ **Requires `firebase deploy --only firestore:rules` before/with the release** — client depends on the new read rule. ⚠️ Existing "Pals only" reviews become visible to everyone once deployed.
 - **v0.2.23** — Two things: (1) **User-created parkrun venues** — if a parkrun isn't in `parkruns_uk.json`, "Add it manually" under the parkrun picker creates a shared *venue* (no date) in the new `parkrunVenues` collection; all users see it merged into both parkrun pickers (`add_race_screen.dart`, `plan_add_sheet.dart`) and pick their own Saturday. `RaceService.addParkrunVenue`/`parkrunVenues`; venue ids `prv_<docId>`, per-date races `prv_<docId>_<yyyyMMdd>`. **Requires the new `parkrunVenues` Firestore rule deployed** to function. Not yet on the Explore map (manual form collects no lat/lng). (2) **AAA rating/achievement pink** in both themes — dark `#FF3CAC`→`#FF8AD0` (7.6:1), light `#C0006A`→`#A8005C` (7.45:1).
 - **v0.2.22** — **Date-locked race adds.** In the Plan tap-a-date sheet (`plan_add_sheet.dart`), a fixed-date race (bundled *or* community) can now only be added on the calendar day it actually takes place — new `_Known.addableOn(tapped)` (parkruns always addable; they take the tapped Saturday). Mismatched races stay visible but **disabled**, with the subtitle replaced by "Only addable on \<date>" + a busy icon. `_add()` also guards on `addableOn`. Explore → "Going" deliberately left unrestricted so future races can still be planned ahead.
 - **v0.2.21** — Three fixes: (1) **planned parkruns can be cancelled** — a per-date parkrun doc the user marked "going" now shows a red **Not going** button in `RaceDetailScreen` (the `isParkrun` branch previously only offered "Plan a date"/"Review"); (2) **calendar weekday labels** no longer clipped (`daysOfWeekHeight: 24` on `TableCalendar`); (3) **account deletion now purges legacy `follows`** in both directions — otherwise re-signup re-ran the Pals migration and resurrected old connections. Firestore `follows` rule now allows either party to `delete` (create/update still locked); rules deployed.

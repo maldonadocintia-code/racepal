@@ -244,20 +244,19 @@ class RaceService {
     _invalidateRace(raceId);
   }
 
-  Stream<List<Review>> raceReviews(String raceId, {bool publicOnly = false}) {
-    Query q = _db
-        .collection(AppConstants.reviewsCol)
-        .where('raceId', isEqualTo: raceId)
-        .orderBy('createdAt', descending: true);
-
-    if (publicOnly) {
-      q = q.where('isPublic', isEqualTo: true);
-    }
-
-    return q.snapshots().map(
-      (s) => s.docs.map((d) => Review.fromDoc(d)).toList(),
-    );
-  }
+  /// All reviews for a race, newest first. Reviews are public to any signed-in
+  /// user (the everyone/pals-only split was dropped), so a single equality
+  /// query is enough — we sort client-side to avoid needing a composite index,
+  /// and per-race review counts are small.
+  Stream<List<Review>> raceReviews(String raceId) => _db
+      .collection(AppConstants.reviewsCol)
+      .where('raceId', isEqualTo: raceId)
+      .snapshots()
+      .map((s) {
+        final list = s.docs.map((d) => Review.fromDoc(d)).toList();
+        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return list;
+      });
 
   Stream<List<Review>> userReviews(String userId) => _db
       .collection(AppConstants.reviewsCol)

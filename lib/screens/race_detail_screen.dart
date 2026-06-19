@@ -167,18 +167,13 @@ class _RaceDetailBody extends StatelessWidget {
                 ),
               ),
 
-            // Attendees (per-date; not shown for parkrun venue doc)
-            if (!race.isParkrun)
-              _section(
-                'Who\'s going (${race.attendeeCount})',
-                _AttendeesList(raceId: race.id),
-              ),
+            // Attendees (per-date; not shown for parkrun venue doc). The count
+            // and the avatar list are both driven off the same live stream, so
+            // the header stays in sync as people join/leave.
+            if (!race.isParkrun) _AttendeesSection(raceId: race.id),
 
             // Reviews
-            _section(
-              'Reviews',
-              _ReviewSection(race: race, uid: uid),
-            ),
+            _ReviewSection(race: race, uid: uid),
 
             const SizedBox(height: 32),
           ],
@@ -595,9 +590,27 @@ class _PalsSectionState extends State<_PalsSection> {
   }
 }
 
-class _AttendeesList extends StatelessWidget {
+/// Section header matching the look of `_RaceDetailBody._section`, used by the
+/// sections that render their own (live-counted) header.
+Widget _sectionHeader(BuildContext context, String title) {
+  final c = AppColors.of(context);
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+    child: Text(
+      title,
+      style: TextStyle(
+        fontFamily: AppType.heading,
+        fontWeight: FontWeight.w700,
+        fontSize: AppType.lg,
+        color: c.textPrimary,
+      ),
+    ),
+  );
+}
+
+class _AttendeesSection extends StatelessWidget {
   final String raceId;
-  const _AttendeesList({required this.raceId});
+  const _AttendeesSection({required this.raceId});
 
   @override
   Widget build(BuildContext context) {
@@ -607,94 +620,186 @@ class _AttendeesList extends StatelessWidget {
       stream: provider.raceService.raceAttendees(raceId),
       builder: (ctx, snap) {
         final attendees = snap.data ?? [];
-        if (attendees.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text('No attendees yet. Be the first!',
-                style: TextStyle(color: c.textSecondary, fontSize: AppType.sm)),
-          );
-        }
-        return SizedBox(
-          height: 60,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: attendees.length,
-            itemBuilder: (_, i) => Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: FutureBuilder(
-                future: provider.authService.getUser(attendees[i].userId),
-                builder: (_, userSnap) {
-                  final u = userSnap.data;
-                  return UserAvatar(
-                    photoUrl: u?.photoUrl,
-                    displayName: u?.displayName ?? '?',
-                    radius: 22,
-                  );
-                },
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionHeader(context, 'Who\'s going (${attendees.length})'),
+            if (attendees.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text('No attendees yet. Be the first!',
+                    style: TextStyle(color: c.textSecondary, fontSize: AppType.sm)),
+              )
+            else
+              SizedBox(
+                height: 60,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: attendees.length,
+                  itemBuilder: (_, i) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FutureBuilder(
+                      future: provider.authService.getUser(attendees[i].userId),
+                      builder: (_, userSnap) {
+                        final u = userSnap.data;
+                        return UserAvatar(
+                          photoUrl: u?.photoUrl,
+                          displayName: u?.displayName ?? '?',
+                          radius: 22,
+                        );
+                      },
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
+          ],
         );
       },
     );
   }
 }
 
-class _ReviewSection extends StatelessWidget {
+class _ReviewSection extends StatefulWidget {
   final Race race;
   final String uid;
   const _ReviewSection({required this.race, required this.uid});
 
   @override
+  State<_ReviewSection> createState() => _ReviewSectionState();
+}
+
+class _ReviewSectionState extends State<_ReviewSection> {
+  bool _palsOnly = false;
+
+  @override
   Widget build(BuildContext context) {
-    final provider = context.read<AppProvider>();
+    final provider = context.watch<AppProvider>();
     final c = AppColors.of(context);
+    final palUids = provider.palUids.toSet();
+
     return StreamBuilder<List<Review>>(
-      stream: provider.raceService.raceReviews(race.id, publicOnly: true),
+      stream: provider.raceService.raceReviews(widget.race.id),
       builder: (ctx, snap) {
-        final reviews = snap.data ?? [];
-        if (reviews.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text('No reviews yet.',
-                style: TextStyle(color: c.textSecondary, fontSize: AppType.sm)),
-          );
+        final all = snap.data ?? [];
+        final palReviews =
+            all.where((r) => palUids.contains(r.userId)).toList();
+
+        // "All" surfaces your own review first, then pals' (social proof),
+        // then everyone else's. "Pals" narrows to just your pals' reviews.
+        final List<Review> visible;
+        if (_palsOnly) {
+          visible = palReviews;
+        } else {
+          final mine = <Review>[];
+          final pals = <Review>[];
+          final others = <Review>[];
+          for (final r in all) {
+            if (r.userId == widget.uid) {
+              mine.add(r);
+            } else if (palUids.contains(r.userId)) {
+              pals.add(r);
+            } else {
+              others.add(r);
+            }
+          }
+          visible = [...mine, ...pals, ...others];
         }
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: reviews.length,
-          itemBuilder: (_, i) => ReviewTile(
-            review: reviews[i],
-            currentUserId: uid,
-            onEdit: () => showModalBottomSheet(
-              context: ctx,
-              isScrollControlled: true,
-              backgroundColor: c.sheetBg,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionHeader(context, 'Reviews (${all.length})'),
+            // Only offer the Pals filter once a pal has actually reviewed —
+            // otherwise it's a dead toggle.
+            if (palReviews.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Row(
+                  children: [
+                    _filterChip(context, 'All', !_palsOnly,
+                        () => setState(() => _palsOnly = false)),
+                    const SizedBox(width: 8),
+                    _filterChip(context, 'Pals (${palReviews.length})',
+                        _palsOnly, () => setState(() => _palsOnly = true)),
+                  ],
+                ),
               ),
-              builder: (_) => ReviewSheet(
-                race: race,
-                existingReview: reviews[i],
-              ),
-            ),
-            onDelete: () async {
-              await provider.raceService.deleteReview(reviews[i]);
-              if (ctx.mounted) {
-                ScaffoldMessenger.of(ctx).showSnackBar(
-                  const SnackBar(
-                    content: Text('Review deleted'),
-                    behavior: SnackBarBehavior.floating,
+            if (all.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text('No reviews yet.',
+                    style: TextStyle(color: c.textSecondary, fontSize: AppType.sm)),
+              )
+            else if (visible.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text('None of your pals have reviewed this yet.',
+                    style: TextStyle(color: c.textSecondary, fontSize: AppType.sm)),
+              )
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: visible.length,
+                itemBuilder: (_, i) => ReviewTile(
+                  review: visible[i],
+                  currentUserId: widget.uid,
+                  isPal: palUids.contains(visible[i].userId),
+                  onEdit: () => showModalBottomSheet(
+                    context: ctx,
+                    isScrollControlled: true,
+                    backgroundColor: c.sheetBg,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
+                    ),
+                    builder: (_) => ReviewSheet(
+                      race: widget.race,
+                      existingReview: visible[i],
+                    ),
                   ),
-                );
-              }
-            },
-          ),
+                  onDelete: () async {
+                    await provider.raceService.deleteReview(visible[i]);
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(
+                          content: Text('Review deleted'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ),
+          ],
         );
       },
+    );
+  }
+
+  Widget _filterChip(
+      BuildContext context, String label, bool selected, VoidCallback onTap) {
+    final c = AppColors.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? c.actionBg : c.bgSurfaceHigh,
+          borderRadius: BorderRadius.circular(AppRadius.full),
+          border: Border.all(color: selected ? c.actionBg : c.border),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? c.actionText : c.textSecondary,
+            fontWeight: FontWeight.w600,
+            fontSize: AppType.sm,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -714,7 +819,6 @@ class _ReviewSheetState extends State<ReviewSheet> {
   late double _rating;
   late final TextEditingController _bodyCtrl;
   late final TextEditingController _timeCtrl;
-  late bool _isPublic;
   late bool _recommend;
   bool _saving = false;
 
@@ -727,7 +831,6 @@ class _ReviewSheetState extends State<ReviewSheet> {
     _rating = e?.rating ?? 3;
     _bodyCtrl = TextEditingController(text: e?.body ?? '');
     _timeCtrl = TextEditingController(text: e?.finishTime ?? '');
-    _isPublic = e?.isPublic ?? true;
     _recommend = e?.recommend ?? true;
   }
 
@@ -815,14 +918,6 @@ class _ReviewSheetState extends State<ReviewSheet> {
               _recommendBtn(false, 'No'),
             ],
           ),
-          const SizedBox(height: 12),
-          Text('Who can see this review?',
-              style: TextStyle(color: c.textSecondary, fontSize: AppType.sm)),
-          const SizedBox(height: 4),
-          _visibilityOption(
-              true, 'Everyone on RacePals', 'Any RacePals user can see it'),
-          _visibilityOption(
-              false, 'Pals only', 'Only your pals can see it'),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
@@ -836,36 +931,6 @@ class _ReviewSheetState extends State<ReviewSheet> {
           const SizedBox(height: 20),
         ],
         ),
-      ),
-    );
-  }
-
-  Widget _visibilityOption(bool value, String title, String subtitle) {
-    final c = AppColors.of(context);
-    return InkWell(
-      onTap: () => setState(() => _isPublic = value),
-      borderRadius: BorderRadius.circular(AppRadius.sm),
-      child: Row(
-        children: [
-          Radio<bool>(
-            value: value,
-            groupValue: _isPublic,
-            activeColor: c.textLink,
-            onChanged: (v) => setState(() => _isPublic = v!),
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: TextStyle(color: c.textPrimary, fontSize: AppType.base)),
-                Text(subtitle,
-                    style: TextStyle(
-                        fontSize: AppType.sm, color: c.textSecondary)),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -922,7 +987,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
         rating: _rating,
         body: _bodyCtrl.text.trim().isNotEmpty ? _bodyCtrl.text.trim() : null,
         finishTime: _timeCtrl.text.trim().isNotEmpty ? _timeCtrl.text.trim() : null,
-        isPublic: _isPublic,
+        isPublic: true,
         recommend: _recommend,
         createdAt: e.createdAt,
       ));
@@ -933,7 +998,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
         rating: _rating,
         body: _bodyCtrl.text.trim().isNotEmpty ? _bodyCtrl.text.trim() : null,
         finishTime: _timeCtrl.text.trim().isNotEmpty ? _timeCtrl.text.trim() : null,
-        isPublic: _isPublic,
+        isPublic: true,
         recommend: _recommend,
       );
     }

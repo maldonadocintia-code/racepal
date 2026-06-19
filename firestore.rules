@@ -65,13 +65,9 @@ service cloud.firestore {
 
     // ── Reviews ───────────────────────────────────────────────────────────────
     match /reviews/{reviewId} {
-      // Public reviews visible to all signed-in users;
-      // pals-only reviews visible to the author and their pals.
-      allow read: if isSignedIn() && (
-        resource.data.isPublic == true ||
-        isOwner(resource.data.userId) ||
-        isPal(resource.data.userId)
-      );
+      // Reviews are public to any signed-in user (the everyone/pals-only split
+      // was dropped). Only the author may create, edit or delete their own.
+      allow read: if isSignedIn();
       allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
       allow update, delete: if isOwner(resource.data.userId);
     }
