@@ -14,8 +14,7 @@ Also read: `BACKLOG.md` (outstanding work), `PROJECT_INSTRUCTIONS.md` (how to wo
 - App display name: **RacePals** (renamed v0.2.13). **Package id, repo and Firebase project keep the old `racepal` name** — only the user-facing name changed.
 - GitHub: https://github.com/maldonadocintia-code/racepal (public)
 - Latest release: https://github.com/maldonadocintia-code/racepal/releases/latest
-- Current released version: **v0.2.19-beta** (pubspec `0.2.19+20`)
-- **In progress (uncommitted on `master`):** Volt & Velocity design-system rebrand + dark/light theming — see "Design system" section below
+- Current released version: **v0.2.20-beta** (pubspec `0.2.20+21`) — Volt & Velocity rebrand + dark/light themes (see "Design system" section)
 - Firebase project: **racepal-ae334**
 
 ---
@@ -118,9 +117,9 @@ A single **symmetric friendship**. No more one-directional follows, no follower/
 
 ---
 
-## Design system — Volt & Velocity (in progress)
+## Design system — Volt & Velocity (shipped v0.2.20)
 
-A dark **and** light theme rebrand. Source spec: the `racepals-design-system.md` doc the user supplied (written for React Native; translated to Flutter). Started 2026-06-18, **not yet committed/released**.
+A dark **and** light theme rebrand. Source spec: the `racepals-design-system.md` doc the user supplied (written for React Native; translated to Flutter). **Complete and released as v0.2.20-beta (2026-06-19).** All screens converted; `flutter analyze` clean.
 
 **Identity:** primary = **volt green `#C4FF00`** on near-black `#0D0E1A` (replaces the old purple `#6C3CE1`). Fonts: **Barlow Condensed ExtraBold** (display/stats/distances) + **Space Grotesk** (body/headings) — bundled in `assets/fonts/`, declared in `pubspec.yaml`. Space Grotesk is a variable font; weight is picked from `fontWeight`.
 
@@ -129,11 +128,11 @@ A dark **and** light theme rebrand. Source spec: the `racepals-design-system.md`
 - `lib/services/theme_controller.dart` holds the mode (System/Light/Dark), persisted via `shared_preferences`. `main.dart` uses `MultiProvider` and `MaterialApp(theme: AppTheme.light, darkTheme: AppTheme.dark, themeMode: controller.mode)`.
 - **New code:** use `final c = AppColors.of(context);` then `c.primary` etc., plus `AppType.*`/`AppSpacing.*`/`AppRadius.*`. **Do not** add new `AppTheme.primary`-style static refs or numeric `fontSize:`.
 
-**Migration is incremental.** Legacy `AppTheme.*` colour + `fs*` constants are kept (mapped to the OLD purple) so unconverted screens still compile. **A screen not yet converted will not adapt to light mode** (static consts don't switch) — expect dark-on-light breakage there until its pass.
+**Accent semantics (settled):** volt = primary/active, green = parkrun, cyan = race, pink (`achievement`) = ratings/achievements, teal = pals. **Volt fails as a foreground on light**, so anywhere it would be text/icon-on-light it's swapped for `c.textLink` (volt on dark / violet on light). The legacy `AppTheme.*` colour + `fs*` constants still exist (kept during migration) but are now unused except `AppTheme.light`/`AppTheme.dark` in main.dart — safe to delete in a future cleanup.
 
-**Status:** ✅ theme infra, ✅ Me-screen Appearance selector, ✅ Explore (`map_screen.dart`). **Remaining (~13 files):** `feed_screen`, `calendar_screen`, `profile_screen` (selector only so far), `race_detail_screen`, `add_race_screen`, `edit_profile_screen`, `pals_screen`, `login_screen`, `home_shell`, `widgets/shared_widgets`, `widgets/plan_add_sheet`, `widgets/parkrun_helpers`.
+**Status:** ✅ **Complete.** All 13 screens/widgets converted to `AppColors.of(context)` + `AppType`/`AppSpacing`/`AppRadius`. Released v0.2.20-beta. Throwaway preview harness lives at `test/volt_gallery_screenshot_test.dart` (run `flutter test --update-goldens` → PNGs in `test/shots/`).
 
-**Accessibility:** doc's verified contrast values kept. Watch the light-mode "Going" badge (olive-on-volt-tint, AA not AAA).
+**Accessibility:** doc's verified contrast values kept. Watch the light-mode "Going" badge (olive-on-volt-tint, AA not AAA). Type scale is the doc's larger one (display→60, distances 28), superseding the old v0.2.19 6-step `fs*` scale. **Not yet eyeballed on a physical device** — verified only via the headless gallery screenshots.
 
 ---
 
@@ -216,6 +215,7 @@ Goal: ship to the **Play Store closed-testing** track for feedback. See **`PLAY_
 
 ## Release history (recent)
 
+- **v0.2.20** — **Volt & Velocity design system**: full rebrand (volt-green on midnight) + **light & dark themes** with a System/Light/Dark selector (Me → Appearance, persisted). Bundled Barlow Condensed + Space Grotesk fonts. New `AppColors`/`AppType`/`AppSpacing`/`AppRadius` tokens; all screens converted. (See "Design system" section.)
 - **v0.2.19** — App-wide type scale (BACKLOG #7): 6-step scale in `theme.dart`, all screens snapped to tokens.
 - **v0.2.18** — Feed redesigned as a timeline (day groups, type icons/colour, timestamps, quoted reviews); clearer review-visibility wording.
 - **v0.2.17** — Explore shows ratings next to curated races/parkruns (B6); faster review posting + scrollable sheet (B7); calendar read/cost fix (race cache + no day-tap reload, #9).
