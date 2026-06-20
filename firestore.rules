@@ -11,12 +11,6 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
-    // Pals are stored as two mirrored docs: pals/{owner}_{other}. We're pals with
-    // `otherUid` if the doc owned by us pointing at them exists.
-    function isPal(otherUid) {
-      return exists(/databases/$(database)/documents/pals/$(request.auth.uid + '_' + otherUid));
-    }
-
     // ── Users ─────────────────────────────────────────────────────────────────
     match /users/{uid} {
       allow read: if isSignedIn();
