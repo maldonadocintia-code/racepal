@@ -589,7 +589,9 @@ class AppTheme {
 
 class AppConstants {
   static const String appName = 'RacePals';
-  static const String appVersion = '1.0.0';
+  // Keep in sync with pubspec.yaml `version:`. Shown on the Explore header so a
+  // test build is identifiable on-device (which build am I actually running?).
+  static const String appVersion = '0.2.29+30';
 
   // Privacy policy — hosted free on GitHub Pages (docs/privacy.html on master).
   static const String privacyPolicyUrl =

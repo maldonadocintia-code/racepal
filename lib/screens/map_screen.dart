@@ -670,6 +670,17 @@ class _MapScreenState extends State<MapScreen> {
           if (_place != null) _radiusSlider(c),
           const SizedBox(height: 8),
           _pillsRow(c),
+          // Build marker — confirms which build is running on-device. Temporary
+          // diagnostic for the B8 filter-pill report.
+          Align(
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4, right: 4),
+              child: Text('build ${AppConstants.appVersion}',
+                  style: TextStyle(
+                      color: c.textTertiary, fontSize: AppType.xs)),
+            ),
+          ),
         ],
       ),
     );
