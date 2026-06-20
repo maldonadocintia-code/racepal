@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- RacePals adaptive icon foreground — the volt "Wave" pulse + white core.
+     Centred within the 66% safe zone of the 108dp canvas. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+    <path
+        android:pathData="M286,512 C360,360 432,360 512,512 S664,664 738,512"
+        android:strokeColor="#C4FF00"
+        android:strokeWidth="76"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"/>
+    <path
+        android:pathData="M468,512 a44,44 0 1,0 88,0 a44,44 0 1,0 -88,0"
+        android:fillColor="#FFFFFF"/>
+</vector>
