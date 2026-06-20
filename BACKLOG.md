@@ -46,7 +46,7 @@ Effort: **S** = a few hours · **M** = a day or two · **L** = multiple sessions
 | 8 | Follow-back on requests/new followers | When a new follower (or follow-requester) isn't followed back yet, show a "Follow back" action in the follow-requests sheet (Feed bell) — ideally Accept + follow-back in one tap to become Pals instantly. (Followers tab already has follow-back since v0.2.5.) | S | 📋 Not started |
 | 13 | Surface filter (Road / Trail) | A terrain category, **separate from the distance axis** ("Trail" is not a distance — a Trail 10K and a Road 10K are both 10K). Would slot into the #3 filter sheet as a third "Surface" section + a removable chip. **Parked pending demand** — only build if testers ask for it. Needs a new `surface: road\|trail` field on every curated race + a rule for parkruns (most are mixed/park paths; likely just exclude parkruns from this filter). Prototyped then removed in `prototype/explore_option_a_mockup.html` history. | M | 🅿️ Parked (validate demand) |
 | 9 | Calendar/Profile load performance | Calendar re-fetched every race one-by-one on every redraw (burned Firestore reads). **Fixed:** added a 2-min TTL race-doc cache in `RaceService.getRace` (busted on stat writes), and split `_MonthView` into a stateless loader + stateful `_MonthCalendar` so day-tap/month-change no longer re-runs the loader. Profile `getRace` calls now share the same cache. | S | ✅ Done (calendar; cost fix) |
-| 16 | Export races to Google Calendar | Let a user add a race they're attending to their own Google Calendar. **`lib/services/google_calendar_service.dart` is already written but not wired to any UI** — needs an entry point (e.g. a button on race detail / the Plan day panel) and the OAuth scope/consent flow tested. (Was the "Parked — built but not exposed" item; now an explicit to-do.) | S | 📋 Not started |
+| 16 | Export races to Google Calendar | Let a user add a race they're attending to their own Google Calendar. Wired: **"Add to Google Calendar"** button on race detail (dated races only — parkruns plan a specific Saturday separately) → `AppProvider.addRaceToCalendar` → `GoogleCalendarService` (reuses the existing Google sign-in, prompts for the `calendar.events` scope on first use). **Pending:** add the `.../auth/calendar.events` scope to the OAuth consent screen in Google Cloud console + test the consent flow on-device; optional follow-up = export a *planned parkrun date* from the Plan day panel. | S | 🟡 Wired — needs console scope + on-device test |
 
 ---
 
@@ -108,14 +108,6 @@ Effort: **S** = a few hours · **M** = a day or two · **L** = multiple sessions
 | # | Item | Notes | Effort | Status |
 |---|---|---|---|---|
 | C1 | Delete Explore/Plan prototype | Remove throwaway `prototype/explore_plan_mockup.html` once the v0.2.12 Explore/Plan redesign is confirmed on-device. | S | 📋 Not started |
-
----
-
-## Parked — built but not exposed yet
-
-| Item | Notes |
-|---|---|
-| Google Calendar export | `lib/services/google_calendar_service.dart` is written but not wired to any button. Add a UI entry point once the app is more mature. |
 
 ---
 

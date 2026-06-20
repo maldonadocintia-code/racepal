@@ -8,6 +8,7 @@ import '../models/review_model.dart';
 import '../services/auth_service.dart';
 import '../services/race_service.dart';
 import '../services/pal_service.dart';
+import '../services/google_calendar_service.dart';
 
 class AppProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -185,6 +186,13 @@ class AppProvider extends ChangeNotifier {
 
   Future<void> addRace(Race race) async {
     await _raceService.addRace(race);
+  }
+
+  /// Adds [race] to the user's own Google Calendar. Prompts for the
+  /// calendar.events scope on first use (reusing the existing Google sign-in),
+  /// so no extra auth plumbing is needed. Throws on cancellation/denial.
+  Future<void> addRaceToCalendar(Race race) async {
+    await GoogleCalendarService(_authService.googleSignIn).addRace(race);
   }
 
   Future<void> setAttendance({

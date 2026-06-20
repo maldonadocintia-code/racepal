@@ -167,6 +167,15 @@ class _RaceDetailBody extends StatelessWidget {
                 ),
               ),
 
+            // Export to the user's own Google Calendar. Only for dated races —
+            // a parkrun venue doc has no committed date (you plan a specific
+            // Saturday separately).
+            if (!race.isParkrun)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: _AddToCalendarButton(race: race),
+              ),
+
             // Attendees (per-date; not shown for parkrun venue doc). The count
             // and the avatar list are both driven off the same live stream, so
             // the header stays in sync as people join/leave.
@@ -245,6 +254,67 @@ class _RaceDetailBody extends StatelessWidget {
       await provider.raceService.deleteRace(race.id);
       Navigator.pop(context);
     }
+  }
+}
+
+/// "Add to Google Calendar" — exports a dated race to the signed-in user's
+/// own primary calendar. Owns its loading state and surfaces success/failure
+/// via a SnackBar. Cancelling the consent prompt is treated quietly.
+class _AddToCalendarButton extends StatefulWidget {
+  final Race race;
+  const _AddToCalendarButton({required this.race});
+
+  @override
+  State<_AddToCalendarButton> createState() => _AddToCalendarButtonState();
+}
+
+class _AddToCalendarButtonState extends State<_AddToCalendarButton> {
+  bool _adding = false;
+
+  Future<void> _add() async {
+    if (_adding) return;
+    setState(() => _adding = true);
+    final provider = context.read<AppProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await provider.addRaceToCalendar(widget.race);
+      messenger.showSnackBar(const SnackBar(
+        content: Text('Added to your Google Calendar'),
+        behavior: SnackBarBehavior.floating,
+      ));
+    } catch (e) {
+      // Permission denied / user cancelled / network — show a short message.
+      final cancelled = e.toString().toLowerCase().contains('denied') ||
+          e.toString().toLowerCase().contains('cancel');
+      messenger.showSnackBar(SnackBar(
+        content: Text(cancelled
+            ? 'Calendar access needed to add this race'
+            : "Couldn't add to calendar — please try again"),
+        behavior: SnackBarBehavior.floating,
+      ));
+    } finally {
+      if (mounted) setState(() => _adding = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    return OutlinedButton.icon(
+      onPressed: _adding ? null : _add,
+      icon: _adding
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.event_outlined, size: 16),
+      label: const Text('Add to Google Calendar'),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: c.textLink,
+        side: BorderSide(color: c.textLink),
+      ),
+    );
   }
 }
 
