@@ -159,6 +159,43 @@ Fill the IARC questionnaire honestly:
 
 ---
 
+## 9. Google Calendar export — OAuth scope verification 👤 ⚠️ (deferred — do before public launch)
+
+The "Add to Google Calendar" button (race detail) uses the sensitive scope
+`https://www.googleapis.com/auth/calendar.events`. This needs a one-time
+**OAuth verification** with Google — but **not yet**.
+
+**Decision (June 2026): defer verification; run under the unverified-app grace for the closed test.**
+
+Why we can wait:
+- The OAuth consent screen is **In production** *on purpose* — Testing mode would
+  (a) only let manually-listed test users sign in, and (b) expire refresh tokens
+  every **7 days** (testers silently logged out weekly). Production avoids both, so
+  **leave it In production.**
+- A production app + a **sensitive** scope is what triggers Google's verification ask.
+  But an unverified production app **still works for up to 100 users**, with a
+  *"Google hasn't verified this app → Advanced → continue"* warning screen. That's
+  fine for a closed test.
+- So: the `calendar.events` scope was **added without submitting the verification
+  form**. Testers click through the warning once.
+
+⚠️ **Cost note (the recurring worry):** verifying a **sensitive** scope is **FREE** —
+it's a review process (days to ~2 weeks, may ask for the privacy-policy URL, which is
+already hosted). Only **restricted** scopes (Gmail, full Drive) need a *paid*
+third-party security assessment. `calendar.events` is **sensitive, not restricted** —
+**no payment, ever.**
+
+**To do before opening to the public (not for the closed test):**
+1. Google Auth Platform → **Verification Center** → start verification for the
+   `calendar.events` scope.
+2. Supply the privacy-policy URL (the GitHub Pages link from step 3) and a short
+   justification ("let users add a race they're attending to their own calendar").
+3. Wait for approval → the "unverified app" warning disappears for everyone.
+
+Until then the feature is fully usable by your ≤100 closed testers.
+
+---
+
 ## Recap of what's already done in code
 - ✅ In-app **account deletion** (Me tab → Delete account) — wipes profile, photo,
   reviews, race history, Pals, activity, then the auth account.
