@@ -496,7 +496,7 @@ class _MonthCalendarState extends State<_MonthCalendar> {
                       style: TextStyle(color: c.textSecondary)),
                 )
               else
-                ...selectedEntries.map((e) => _entryRow(context, e)),
+                ...selectedEntries.map((e) => _DayRaceCard(entry: e)),
             ],
           ),
         ),
@@ -534,4 +534,177 @@ class _MonthCalendarState extends State<_MonthCalendar> {
       width: 7,
       height: 7,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle));
+}
+
+// ── Day panel card ───────────────────────────────────────────────────────────
+
+/// A race card for the selected-day panel. Unlike the compact list-view row, it
+/// drops the redundant date column (the day is already selected) and lists
+/// *every* person going — you and each pal, by avatar + name — rather than
+/// capping at a few avatars. A long list collapses behind an "and N more"
+/// toggle so a busy day doesn't force endless scrolling. See BACKLOG #11.
+class _DayRaceCard extends StatefulWidget {
+  final _Entry entry;
+  const _DayRaceCard({required this.entry});
+
+  @override
+  State<_DayRaceCard> createState() => _DayRaceCardState();
+}
+
+class _DayRaceCardState extends State<_DayRaceCard> {
+  // How many attendees to show before collapsing the rest behind a toggle.
+  static const int _collapsedCount = 6;
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final e = widget.entry;
+    final me = e.mine ? context.read<AppProvider>().currentUser : null;
+    final borderColor = e.mine ? c.planBarMine : c.planBarPals;
+    final hasReview = e.race.isPast && e.race.reviewCount > 0;
+
+    // Everyone we know is going: you first (if you're going), then each pal.
+    final attendees = <Widget>[
+      if (me != null) _attendeeChip(context, _meAvatar(context, me), 'You'),
+      ...e.pals.map((p) => _attendeeChip(
+            context,
+            _palAvatar(context, p, r: 12),
+            p.displayName.split(' ').first,
+          )),
+    ];
+    final total = attendees.length;
+    final shown =
+        _expanded ? attendees : attendees.take(_collapsedCount).toList();
+    final hidden = total - shown.length;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: c.bgSurface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border(
+          left: BorderSide(color: borderColor, width: 4),
+          top: BorderSide(color: c.border),
+          right: BorderSide(color: c.border),
+          bottom: BorderSide(color: c.border),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header — tap anywhere to open the race.
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => RaceDetailScreen(raceId: e.race.id)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(e.race.name,
+                            style: TextStyle(
+                                color: c.textPrimary,
+                                fontWeight: FontWeight.w500,
+                                fontSize: AppType.md)),
+                        const SizedBox(height: 2),
+                        Text(e.race.location,
+                            style: TextStyle(
+                                color: c.textSecondary, fontSize: AppType.sm)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (e.mine)
+                    hasReview
+                        ? Row(
+                            children: [
+                              Icon(Icons.star, size: 13, color: c.achievement),
+                              const SizedBox(width: 2),
+                              Text(e.race.averageRating.toStringAsFixed(1),
+                                  style: TextStyle(
+                                      color: c.achievement,
+                                      fontSize: AppType.sm,
+                                      fontWeight: FontWeight.w700)),
+                            ],
+                          )
+                        : _statusChip(context, e.myStatus)
+                  else
+                    _miniTag('Pal', c.pals),
+                ],
+              ),
+            ),
+          ),
+          if (total > 0) ...[
+            Divider(height: 1, color: c.border),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('$total GOING',
+                      style: TextStyle(
+                          color: c.textTertiary,
+                          fontSize: AppType.xs,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5)),
+                  const SizedBox(height: 8),
+                  Wrap(spacing: 10, runSpacing: 8, children: shown),
+                  if (total > _collapsedCount) ...[
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () => setState(() => _expanded = !_expanded),
+                      child: Text(_expanded ? 'Show less' : 'and $hidden more',
+                          style: TextStyle(
+                              color: c.textLink,
+                              fontSize: AppType.sm,
+                              fontWeight: FontWeight.w600)),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+Widget _attendeeChip(BuildContext context, Widget avatar, String name) {
+  final c = AppColors.of(context);
+  return Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      avatar,
+      const SizedBox(width: 5),
+      Text(name, style: TextStyle(color: c.textPrimary, fontSize: AppType.sm)),
+    ],
+  );
+}
+
+/// "You" avatar for the attendee list — your photo, or your initial on the
+/// "mine" calendar colour so it reads as you, not a pal.
+Widget _meAvatar(BuildContext context, AppUser u, {double r = 12}) {
+  final c = AppColors.of(context);
+  if (u.photoUrl != null && u.photoUrl!.isNotEmpty) {
+    return CircleAvatar(radius: r, backgroundImage: NetworkImage(u.photoUrl!));
+  }
+  return CircleAvatar(
+    radius: r,
+    backgroundColor: c.calDotMine,
+    child: Text(
+      u.displayName.isNotEmpty ? u.displayName[0].toUpperCase() : '?',
+      style: TextStyle(
+          color: Colors.white, fontSize: r * 0.85, fontWeight: FontWeight.bold),
+    ),
+  );
 }

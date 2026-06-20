@@ -27,8 +27,6 @@ enum _Seg { all, parkruns, races }
 
 class _MapScreenState extends State<MapScreen> {
   GoogleMapController? _mapController;
-  final Set<Marker> _markers = {};
-  final Set<Circle> _circles = {};
 
   // Search centre (typed place) + radius in miles. Null place = no location
   // filter yet (show everything upcoming).
@@ -281,39 +279,43 @@ class _MapScreenState extends State<MapScreen> {
     return res;
   }
 
+  // Filters changed → re-run build so the list and (freshly-derived) map
+  // markers both reflect the new filter state. Markers and circles are built
+  // from _buildResults() inside build()/_mapView(), so there's nothing to
+  // cache here — just trigger a rebuild.
   void _rebuild() {
-    final results = _buildResults();
-    final markers = <Marker>{};
-    for (final r in results) {
-      markers.add(Marker(
-        markerId: MarkerId(r.markerKey),
-        position: LatLng(r.lat, r.lng),
-        icon: BitmapDescriptor.defaultMarkerWithHue(
-            r.isParkrun ? BitmapDescriptor.hueGreen : BitmapDescriptor.hueOrange),
-        onTap: r.onSelect,
-      ));
-    }
-    final circles = <Circle>{};
-    if (_place != null) {
-      final volt = AppColors.of(context).primary;
-      circles.add(Circle(
+    if (mounted) setState(() {});
+  }
+
+  // A fresh marker set derived from the same filtered results the list uses, so
+  // map and list can never disagree. google_maps_flutter only diffs against a
+  // *new* Set instance, so we build one each time rather than mutating a field.
+  Set<Marker> _markersFor(List<_Result> results) {
+    return {
+      for (final r in results)
+        Marker(
+          markerId: MarkerId(r.markerKey),
+          position: LatLng(r.lat, r.lng),
+          icon: BitmapDescriptor.defaultMarkerWithHue(r.isParkrun
+              ? BitmapDescriptor.hueGreen
+              : BitmapDescriptor.hueOrange),
+          onTap: r.onSelect,
+        ),
+    };
+  }
+
+  Set<Circle> _circlesFor(AppColors c) {
+    if (_place == null) return const {};
+    return {
+      Circle(
         circleId: const CircleId('radius'),
         center: LatLng(_place!.lat, _place!.lng),
         radius: _radius * 1609.34,
-        fillColor: volt.withValues(alpha: 0.10),
-        strokeColor: volt.withValues(alpha: 0.6),
+        fillColor: c.primary.withValues(alpha: 0.10),
+        strokeColor: c.primary.withValues(alpha: 0.6),
         strokeWidth: 2,
-      ));
-    }
-    if (!mounted) return;
-    setState(() {
-      _markers
-        ..clear()
-        ..addAll(markers);
-      _circles
-        ..clear()
-        ..addAll(circles);
-    });
+      ),
+    };
   }
 
   Future<void> _openLocationPicker() async {
@@ -458,14 +460,10 @@ class _MapScreenState extends State<MapScreen> {
     return StreamBuilder<List<Race>>(
       stream: _racesStream,
       builder: (ctx, snap) {
-        final newRaces = snap.data ?? [];
-        // Only the marker set needs a full rebuild when the race *count* changes;
-        // but always take the latest data so updated ratings/stats are reflected
-        // even when the count is unchanged.
-        if (newRaces.length != _races.length) {
-          WidgetsBinding.instance.addPostFrameCallback((_) => _rebuild());
-        }
-        _races = newRaces;
+        // Take the latest data each build; markers and the list are both
+        // derived from _buildResults() below, so updated ratings/stats and
+        // added/removed races are reflected without any cached marker set.
+        _races = snap.data ?? [];
         final results = _buildResults();
         final panelOpen = _selectedParkrun != null ||
             _selectedEvent != null ||
@@ -505,7 +503,7 @@ class _MapScreenState extends State<MapScreen> {
                       if (_isListView)
                         _listView(results)
                       else
-                        _mapView(),
+                        _mapView(results),
                       if (_selectedParkrun != null)
                         Positioned(
                           bottom: 0,
@@ -751,29 +749,31 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  // Quiet filter pills — Month / Distance / Type. Outline at rest, fill volt
-  // when active, so colour signals which filters are on. Distance is disabled
-  // when Type = Parkruns (all parkruns are 5K).
+  // Quiet filter pills — Month / Distance / Type. Each shows its *name* at rest
+  // and its *value* only when active, so an inactive pill stays short. Outline
+  // at rest, fill volt when active, so colour signals which filters are on.
+  // A Wrap lets an overflowing pill drop to a second row rather than scroll out
+  // of sight. Distance is disabled when Type = Parkruns (all parkruns are 5K).
   Widget _pillsRow(AppColors c) {
-    final monthLabel = _month == null
-        ? 'Any month'
-        : DateFormat('MMM yyyy').format(DateFormat('yyyy-MM').parse(_month!));
+    final monthActive = _month != null;
+    final monthLabel = monthActive
+        ? DateFormat('MMM yyyy').format(DateFormat('yyyy-MM').parse(_month!))
+        : 'Month';
     final parkOnly = _seg == _Seg.parkruns;
-    return SizedBox(
-      height: 42,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
+    final distActive = !parkOnly && _dist != null;
+    final distLabel =
+        parkOnly ? '5K only' : (distActive ? _dist!.label : 'Distance');
+    final typeActive = _seg != _Seg.all;
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
         children: [
-          _filterPill(c, monthLabel, _month != null, _pickMonth),
-          const SizedBox(width: 8),
-          _filterPill(
-            c,
-            parkOnly ? '5K only' : (_dist?.label ?? 'Any distance'),
-            !parkOnly && _dist != null,
-            parkOnly ? null : _pickDistance,
-          ),
-          const SizedBox(width: 8),
-          _filterPill(c, _segLabel(), _seg != _Seg.all, _pickType),
+          _filterPill(c, monthLabel, monthActive, _pickMonth),
+          _filterPill(c, distLabel, distActive, parkOnly ? null : _pickDistance),
+          _filterPill(c, typeActive ? _segLabel() : 'Type', typeActive,
+              _pickType),
         ],
       ),
     );
@@ -1073,7 +1073,7 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  Widget _mapView() {
+  Widget _mapView(List<_Result> results) {
     return GoogleMap(
       initialCameraPosition: CameraPosition(
         target: _place != null ? LatLng(_place!.lat, _place!.lng) : _ukCenter,
@@ -1083,8 +1083,8 @@ class _MapScreenState extends State<MapScreen> {
         _mapController = c;
         _moveCamera();
       },
-      markers: _markers,
-      circles: _circles,
+      markers: _markersFor(results),
+      circles: _circlesFor(AppColors.of(context)),
       myLocationButtonEnabled: true,
       myLocationEnabled: true,
       mapToolbarEnabled: false,

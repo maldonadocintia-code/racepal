@@ -38,6 +38,44 @@ class RaceDetailScreen extends StatelessWidget {
   }
 }
 
+/// The hero-header rating line. Streams the race's reviews so the average and
+/// count stay live — the race doc's `reviewCount`/`averageRating` are written
+/// by a background recalc and the doc itself is read through a short-lived
+/// cache, so reading them here would lag behind a just-posted review.
+class _HeaderRating extends StatelessWidget {
+  final String raceId;
+  const _HeaderRating({required this.raceId});
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.read<AppProvider>();
+    return StreamBuilder<List<Review>>(
+      stream: provider.raceService.raceReviews(raceId),
+      builder: (ctx, snap) {
+        final reviews = snap.data ?? const <Review>[];
+        if (reviews.isEmpty) return const SizedBox.shrink();
+        final count = reviews.length;
+        final avg =
+            reviews.map((r) => r.rating).reduce((a, b) => a + b) / count;
+        return Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Row(
+            children: [
+              LightningRating(rating: avg, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                '${avg.toStringAsFixed(1)} · $count review${count == 1 ? '' : 's'}',
+                style:
+                    const TextStyle(color: Colors.white70, fontSize: AppType.sm),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _RaceDetailBody extends StatelessWidget {
   final Race race;
   const _RaceDetailBody({required this.race});
@@ -119,19 +157,10 @@ class _RaceDetailBody extends StatelessWidget {
                       ),
                     ],
                   ),
-                  if (race.averageRating > 0) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        LightningRating(rating: race.averageRating, size: 18),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${race.averageRating.toStringAsFixed(1)} · ${race.reviewCount} reviews',
-                          style: const TextStyle(color: Colors.white70, fontSize: AppType.sm),
-                        ),
-                      ],
-                    ),
-                  ],
+                  // Live rating/count from the reviews stream, not the (cached,
+                  // one-shot) race doc — so the header updates the moment a
+                  // review is posted, including a race's very first one.
+                  _HeaderRating(raceId: race.id),
                 ],
               ),
             ),
