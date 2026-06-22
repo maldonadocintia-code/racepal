@@ -108,7 +108,7 @@ Effort: **S** = a few hours · **M** = a day or two · **L** = multiple sessions
 | # | Item | Notes | Effort | Status |
 |---|---|---|---|---|
 | C1 | Delete Explore/Plan prototype | Remove throwaway `prototype/explore_plan_mockup.html` once the v0.2.12 Explore/Plan redesign is confirmed on-device. | S | 📋 Not started |
-| C2 | Remove temporary build marker | Delete the `build ${AppConstants.appVersion}` label added to `map_screen.dart` `_header()` (v0.2.29, a B8 diagnostic) once B8's pill-wrap fix is confirmed on a real device. | S | 📋 Not started |
+| C2 | Remove temporary build marker | Delete the `build ${AppConstants.appVersion}` label added to `map_screen.dart` `_header()` (v0.2.29, a B8 diagnostic). B8 is now **confirmed fixed on-device (2026-06-22)**, so the marker has served its purpose. **Decision: don't cut a release just for this — bundle the removal into the next feature build.** | S | 🟡 Ready — bundle with next release |
 | C3 | Wire a real version display | `AppConstants.appVersion` is a hand-synced const (was stale `1.0.0`). Replace with `package_info_plus` so the shown version always matches the build, or at least add it to a Settings/About row. Avoids future "which build is running?" guesswork. | S | 📋 Not started |
 | C4 | Clean up stray logo commits on `master` | `master` carries duplicate Wave-logo commits (`ab867f9`, the v0.2.26-era logo work) that were superseded by the v0.2.28 launcher-icon commits on `docs/cost-model-ios-web`. Reconcile/drop before merging the branch to `master`. | S | 📋 Not started |
 
