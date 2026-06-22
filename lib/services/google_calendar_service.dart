@@ -10,7 +10,10 @@ class GoogleCalendarService {
 
   GoogleCalendarService(this._googleSignIn);
 
-  Future<void> addRace(Race race) async {
+  /// Exports [race] to the user's primary calendar. For parkruns (which have no
+  /// single committed date) pass [on] with the chosen Saturday; otherwise the
+  /// race's own date is used.
+  Future<void> addRace(Race race, {DateTime? on}) async {
     final granted = await _googleSignIn.requestScopes([_scope]);
     if (!granted) throw Exception('Calendar permission denied');
 
@@ -24,7 +27,8 @@ class GoogleCalendarService {
       final api = gcal.CalendarApi(client);
 
       // Default to 9am start (UK standard for parkruns; reasonable for races)
-      final start = DateTime(race.date.year, race.date.month, race.date.day, 9, 0);
+      final day = on ?? race.date;
+      final start = DateTime(day.year, day.month, day.day, 9, 0);
       final end = start.add(const Duration(hours: 2));
 
       final description = [

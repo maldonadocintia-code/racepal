@@ -196,14 +196,13 @@ class _RaceDetailBody extends StatelessWidget {
                 ),
               ),
 
-            // Export to the user's own Google Calendar. Only for dated races —
-            // a parkrun venue doc has no committed date (you plan a specific
-            // Saturday separately).
-            if (!race.isParkrun)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: _AddToCalendarButton(race: race),
-              ),
+            // Export to the user's own Google Calendar. Dated races export their
+            // own date; parkruns (no single committed date) ask which Saturday
+            // first, reusing the same picker as the plan flow.
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: _AddToCalendarButton(race: race),
+            ),
 
             // Attendees (per-date; not shown for parkrun venue doc). The count
             // and the avatar list are both driven off the same live stream, so
@@ -302,13 +301,24 @@ class _AddToCalendarButtonState extends State<_AddToCalendarButton> {
 
   Future<void> _add() async {
     if (_adding) return;
+    final race = widget.race;
+
+    // Parkruns recur weekly with no single committed date, so ask which
+    // Saturday to export — the same picker used when planning a parkrun.
+    DateTime? on;
+    if (race.isParkrun) {
+      on = await pickParkrunSaturday(context);
+      if (on == null || !mounted) return; // dismissed
+    }
+
     setState(() => _adding = true);
     final provider = context.read<AppProvider>();
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await provider.addRaceToCalendar(widget.race);
-      messenger.showSnackBar(const SnackBar(
-        content: Text('Added to your Google Calendar'),
+      await provider.addRaceToCalendar(race, on: on);
+      final when = DateFormat('EEE d MMM').format(on ?? race.date);
+      messenger.showSnackBar(SnackBar(
+        content: Text('Added to your Google Calendar — $when'),
         behavior: SnackBarBehavior.floating,
       ));
     } catch (e) {

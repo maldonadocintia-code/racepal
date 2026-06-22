@@ -190,9 +190,10 @@ class AppProvider extends ChangeNotifier {
 
   /// Adds [race] to the user's own Google Calendar. Prompts for the
   /// calendar.events scope on first use (reusing the existing Google sign-in),
-  /// so no extra auth plumbing is needed. Throws on cancellation/denial.
-  Future<void> addRaceToCalendar(Race race) async {
-    await GoogleCalendarService(_authService.googleSignIn).addRace(race);
+  /// so no extra auth plumbing is needed. For parkruns, pass [on] with the
+  /// chosen Saturday. Throws on cancellation/denial.
+  Future<void> addRaceToCalendar(Race race, {DateTime? on}) async {
+    await GoogleCalendarService(_authService.googleSignIn).addRace(race, on: on);
   }
 
   Future<void> setAttendance({
