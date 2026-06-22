@@ -48,6 +48,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/app_logo.png
     - assets/parkruns_uk.json
     - assets/manchester_races.json
     - assets/uk_places.json

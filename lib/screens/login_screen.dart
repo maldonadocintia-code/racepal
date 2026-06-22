@@ -27,7 +27,6 @@ class LoginScreen extends StatelessWidget {
                 width: 90,
                 height: 90,
                 decoration: BoxDecoration(
-                  color: c.primary,
                   borderRadius: BorderRadius.circular(AppRadius.xxl),
                   boxShadow: [
                     BoxShadow(
@@ -37,10 +36,14 @@ class LoginScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Icon(
-                  Icons.bolt,
-                  size: 52,
-                  color: c.textOnVolt,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.xxl),
+                  child: Image.asset(
+                    'assets/app_logo.png',
+                    width: 90,
+                    height: 90,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -54,7 +57,7 @@ class LoginScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Your UK running social calendar',
+                'Your UK running community',
                 style: TextStyle(
                   color: c.textSecondary,
                   fontSize: AppType.md,
@@ -63,11 +66,11 @@ class LoginScreen extends StatelessWidget {
               ),
               const Spacer(flex: 2),
               // Feature bullets
-              _featureRow(context, Icons.bolt, 'Track races & parkruns'),
+              _featureRow(context, '🏃', 'Find and plan your next race or parkrun'),
               const SizedBox(height: 12),
-              _featureRow(context, Icons.people, 'Follow friends, see their runs'),
+              _featureRow(context, '🤝', 'Meet runners like you'),
               const SizedBox(height: 12),
-              _featureRow(context, Icons.star, 'Rate with ⚡ lightning reviews'),
+              _featureRow(context, '⏱️', 'Share the experience, not just the time'),
               const Spacer(flex: 2),
               // Google sign in
               if (provider.error != null) ...[
@@ -163,22 +166,26 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  Widget _featureRow(BuildContext context, IconData icon, String text) {
+  Widget _featureRow(BuildContext context, String emoji, String text) {
     final c = AppColors.of(context);
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(8),
+          width: 34,
+          height: 34,
+          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: c.primaryMuted,
             borderRadius: BorderRadius.circular(AppRadius.md),
           ),
-          child: Icon(icon, color: c.textPrimary, size: 18),
+          child: Text(emoji, style: const TextStyle(fontSize: 18)),
         ),
         const SizedBox(width: 14),
-        Text(
-          text,
-          style: TextStyle(color: c.textPrimary, fontSize: AppType.base),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(color: c.textPrimary, fontSize: AppType.base),
+          ),
         ),
       ],
     );
