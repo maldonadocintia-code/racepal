@@ -64,7 +64,7 @@ Effort: **S** = a few hours · **M** = a day or two · **L** = multiple sessions
 
 | # | Item | Notes | Effort | Status |
 |---|---|---|---|---|
-| G1 | Account deletion | In-app **Delete account** (Me tab) — re-auths via Google then wipes profile, photo, reviews, attendances, pals (both mirror docs), pal requests, activity, then the auth account. Needs the new `users` delete rule **deployed** (see PLAY_STORE_LAUNCH.md step 4). | M | ✅ Done (code) — rule deploy pending |
+| G1 | Account deletion | In-app **Delete account** (Me tab) — re-auths via Google then wipes profile, photo, reviews, attendances, pals (both mirror docs), pal requests, legacy follows, activity, then the auth account. **v0.2.32:** queries run together + docs deleted **concurrently** (was slow/sequential); failures gathered then thrown (complete-or-loud erasure). `users` + `pal_requests` self-delete rules **deployed to production 2026-06-23** — the missing `pal_requests` rule was why sent requests survived deletion. | M | ✅ Done — rules deployed (on-device re-test pending) |
 | G2 | Sign-up consent + privacy policy | Consent notice + Privacy Policy link on login; policy at `docs/privacy.html` — name/email filled, **live on GitHub Pages**. Firebase Analytics dropped to avoid analytics consent. | S | ✅ Done — hosted & live |
 | G3 | Known limitation: stale race aggregates after deletion | Deleting a user's reviews/attendances leaves a race's `reviewCount`/`averageRating`/`attendeeCount` slightly stale (not recalculated). Acceptable for MVP; recalc on delete if it becomes visible. | S | 📋 Not started |
 
