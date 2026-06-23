@@ -92,56 +92,63 @@ class AuthService {
   }
 
   Future<void> _deleteUserData(String uid) async {
-    // Reviews, attendances and activity entries I authored.
-    await _deleteByQuery(
-        _db.collection(AppConstants.reviewsCol).where('userId', isEqualTo: uid));
-    await _deleteByQuery(_db
-        .collection(AppConstants.attendancesCol)
-        .where('userId', isEqualTo: uid));
-    await _deleteByQuery(_db
-        .collection(AppConstants.activitiesCol)
-        .where('userId', isEqualTo: uid));
-    // Pals — both mirrored docs of every friendship I'm in.
-    await _deleteByQuery(
-        _db.collection(AppConstants.palsCol).where('ownerUid', isEqualTo: uid));
-    await _deleteByQuery(
-        _db.collection(AppConstants.palsCol).where('otherUid', isEqualTo: uid));
-    // Pal requests I sent or received.
-    await _deleteByQuery(_db
-        .collection(AppConstants.palRequestsCol)
-        .where('fromUid', isEqualTo: uid));
-    await _deleteByQuery(_db
-        .collection(AppConstants.palRequestsCol)
-        .where('toUid', isEqualTo: uid));
-    // Legacy follows (both directions). These are read-only except for the
-    // one-off pals migration — but if they survive deletion, signing in again
-    // re-runs the migration on a fresh profile doc and resurrects the old
-    // connections as pals. Clearing them keeps a re-signup truly empty.
-    await _deleteByQuery(_db
-        .collection(AppConstants.followsCol)
-        .where('followerUid', isEqualTo: uid));
-    await _deleteByQuery(_db
-        .collection(AppConstants.followsCol)
-        .where('followingUid', isEqualTo: uid));
-    // Profile photo (may not exist — ignore a missing-object error).
+    // Every collection holding this user's personal data, with the field that
+    // ties a doc back to them. Legacy follows (both directions) are included
+    // because if they survive, signing in again re-runs the one-off pals
+    // migration on a fresh profile doc and resurrects the old connections —
+    // clearing them keeps a re-signup truly empty.
+    final queries = <Query>[
+      // Reviews, attendances and activity entries I authored.
+      _db.collection(AppConstants.reviewsCol).where('userId', isEqualTo: uid),
+      _db.collection(AppConstants.attendancesCol).where('userId', isEqualTo: uid),
+      _db.collection(AppConstants.activitiesCol).where('userId', isEqualTo: uid),
+      // Pals — both mirrored docs of every friendship I'm in.
+      _db.collection(AppConstants.palsCol).where('ownerUid', isEqualTo: uid),
+      _db.collection(AppConstants.palsCol).where('otherUid', isEqualTo: uid),
+      // Pal requests I sent or received.
+      _db.collection(AppConstants.palRequestsCol).where('fromUid', isEqualTo: uid),
+      _db.collection(AppConstants.palRequestsCol).where('toUid', isEqualTo: uid),
+      // Legacy follows (both directions).
+      _db.collection(AppConstants.followsCol).where('followerUid', isEqualTo: uid),
+      _db.collection(AppConstants.followsCol).where('followingUid', isEqualTo: uid),
+    ];
+
+    // Run the queries together, then delete every matched doc concurrently.
+    // Individual deletes (not a WriteBatch) sidestep the batch-delete-of-missing-
+    // doc gotcha; gathering failures means one denied/missing doc can't abort the
+    // rest, while the throw below keeps erasure loud — never silently partial.
+    final snaps = await Future.wait(queries.map((q) => q.get()));
+    final refs = [
+      for (final snap in snaps) ...snap.docs.map((d) => d.reference),
+    ];
+    final failures = <Object>[];
+    await Future.wait(refs.map((ref) async {
+      try {
+        await ref.delete();
+      } catch (e) {
+        failures.add(e);
+      }
+    }));
+
+    // Profile photo (may not exist — a missing object is not a failure).
     try {
       await FirebaseStorage.instance
           .ref()
           .child('profile_photos/$uid.jpg')
           .delete();
     } catch (_) {}
+
+    // If any data delete failed, stop before removing the profile doc / auth
+    // account: the account stays recoverable and a retry can finish the job,
+    // rather than leaving an orphaned auth account with stray personal data.
+    if (failures.isNotEmpty) {
+      throw Exception(
+          'Account deletion incomplete: ${failures.length} item(s) could not be '
+          'deleted (first error: ${failures.first}). Please try again.');
+    }
+
     // Finally the profile doc itself.
     await _db.collection(AppConstants.usersCol).doc(uid).delete();
-  }
-
-  /// Deletes every doc a query matches, one at a time. Individual deletes (not a
-  /// batch) keep this robust: a single denied/missing doc can't fail the rest —
-  /// see the batch-delete-of-missing-doc gotcha.
-  Future<void> _deleteByQuery(Query query) async {
-    final snap = await query.get();
-    for (final doc in snap.docs) {
-      await doc.reference.delete();
-    }
   }
 
   Future<AppUser?> getUser(String uid) async {

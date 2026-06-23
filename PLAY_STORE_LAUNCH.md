@@ -93,13 +93,16 @@ on push to `master`.
 
 ---
 
-## 4. Deploy the updated Firestore rules 🤖 ⚠️ (production)
-Account deletion needs the new `users` delete rule. This is a **production deploy** —
-confirm, then:
+## 4. Deploy the updated Firestore rules ✅ DONE (production)
+Account deletion needs the new `users` delete rule **and** the `pal_requests`
+delete rule (without the latter, deletion threw partway and left sent pal
+requests behind). Deployed to production 2026-06-22:
 
 ```bash
 firebase deploy --only firestore:rules --project racepal-ae334
 ```
+
+Re-run this command after any future edit to `firestore.rules`.
 
 ---
 
@@ -203,4 +206,4 @@ Until then the feature is fully usable by your ≤100 closed testers.
 - ✅ **Privacy Policy** page (`docs/privacy.html`) — name + email filled in, **live on GitHub Pages**.
 - ✅ **Firebase Analytics dropped** (no analytics-consent burden).
 - ✅ **Release signing config** wired to `key.properties`.
-- ✅ Firestore **rule** for self-deletion of the user doc (needs deploy — step 4).
+- ✅ Firestore **rules** for self-deletion (user doc + pal_requests) — **deployed to production 2026-06-22**.
